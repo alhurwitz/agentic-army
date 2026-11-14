@@ -1,2 +1,66 @@
 # agentic-army
-Chain-of-command multi-agent orchestration for OpenCode: General → officers → soldiers, with enforced budgets and per-agent git worktrees.
+
+Chain-of-command multi-agent orchestration for [OpenCode](https://opencode.ai): General → officers → soldiers, with enforced budgets and per-agent git worktrees.
+
+## How it works
+
+- **General**: the root session. Runs `/alberts-army <task>`, calls `army_mobilize`, and commands officers.
+- **Officers** (`army-officer`): plan a team's work, delegate to soldiers (or sub-officers), merge their branches, and report up. They never edit code.
+- **Soldiers** (`army-soldier`): do one scoped unit of work in their own git worktree, commit it, and report to their officer.
+
+The plugin enforces the structure:
+
+| Rule | Enforcement |
+| --- | --- |
+| Depth | At most `maxDepth` (1-5) levels below the General; the leaf level is soldiers only. |
+| Chain of command | With `maxDepth >= 2`, the General spawns officers only. Soldiers never delegate. |
+| Span of control | At most 5 running direct reports per commander. |
+| Budget | Every officer prompt starts with `TROOPS: <n>`; an officer costs `1 + n`, a soldier costs 1. Unused budget returns to the parent. |
+| Isolation | Each child gets its own worktree under `<parent worktree>/.army/<slug>` on branch `<parent branch>-<slug>`. |
+
+Tools added to the session: `army_mobilize`, `army_status`, `army_wait`, `army_check`.
+
+## Install
+
+Requires [Bun](https://bun.sh) and OpenCode.
+
+```sh
+git clone https://github.com/alhurwitz/agentic-army
+cd agentic-army
+./install.sh
+```
+
+`install.sh` symlinks the plugin, agents, and command into `~/.config/opencode` (override with `OPENCODE_CONFIG_DIR`) and the status CLI into `~/.local/bin` (override with `ARMY_BIN_DIR`). Existing non-symlink files are backed up.
+
+## Usage
+
+```
+/alberts-army <task>
+```
+
+Check a run without a model call:
+
+```sh
+alberts-army-status            # latest run
+alberts-army-status ses_...    # a specific run
+alberts-army-status --all
+```
+
+Run state is stored in `~/.local/share/opencode/army/`.
+
+## Layout
+
+```
+plugin/army.ts        plugin: tools + spawn enforcement
+plugin/army-tui/      TUI plugin and tree renderer
+agents/               army-officer and army-soldier playbooks
+commands/             /alberts-army command
+bin/army-status.ts    status CLI
+tests/                bun tests
+```
+
+## Development
+
+```sh
+bun test tests
+```
