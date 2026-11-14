@@ -24,7 +24,7 @@ const DEFAULT_MAX_AGENTS = 50
 const MAX_SPAN = 5
 const MANAGER = "army-officer"
 const IC = "army-soldier"
-const STORE = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local", "share", "opencode", "army")
+const stateDir = () => process.env.ARMY_STATE_DIR ?? join(homedir(), ".local", "share", "opencode", "army")
 const BUDGET_LINE = /^\s*TROOPS:\s*(\d+)\s*$/
 const EVENT_STATUS: Record<string, Status> = {
   "session.execution.started": "running",
@@ -192,6 +192,7 @@ const Army = {
     validateShape, validateSpan, validateBudget, charge, refund, writeAtomic, MAX_SPAN,
   },
   async setup(ctx) {
+    const STORE = stateDir()
     const armies = new Map<string, Army>()
     const owners = new Map<string, Army>()
     const pending = new Map<string, { army: Army; child: string; parentID: string; depth: number; budget: number; cost: number }>()
