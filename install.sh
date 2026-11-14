@@ -8,7 +8,7 @@ REPO="$(cd "$(dirname "$0")" && pwd)"
 
 fail() { echo "error: $*" >&2; exit 1; }
 
-command -v bun >/dev/null || fail "bun not found; install it from https://bun.sh"
+RUN="$REPO/bin/army-run"
 command -v git >/dev/null || fail "git not found"
 
 harnesses=("$@")
@@ -19,9 +19,9 @@ if [ ${#harnesses[@]} -eq 0 ]; then
   [ ${#harnesses[@]} -gt 0 ] || fail "no supported harness found on PATH (opencode, claude, copilot, codex); pass one explicitly"
 fi
 
-(cd "$REPO" && bun test tests >/dev/null 2>&1) || fail "tests failed; run 'bun test tests' in $REPO"
+(cd "$REPO" && "$RUN" test tests >/dev/null 2>&1) || fail "tests failed; run 'bin/army-run test tests' in $REPO"
 
-bun "$REPO/scripts/setup.ts" install "${harnesses[@]}"
+"$RUN" "$REPO/scripts/setup.ts" install "${harnesses[@]}"
 
 BIN="${ARMY_BIN_DIR:-$HOME/.local/bin}"
 case ":$PATH:" in *":$BIN:"*) ;; *) echo "note: $BIN is not on PATH" ;; esac
