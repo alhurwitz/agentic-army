@@ -13,7 +13,7 @@ const statusText = (sessionID: string | undefined) => {
   const list = armies.map(({ army }) => army)
   const army = list.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? list[0]
   const warning = skipped.length ? `\n\nSkipped ${skipped.length} unreadable state file(s).` : ""
-  return (army ? renderTree(army) : "No army runs yet. Start one with /alberts-army <task>.") + warning
+  return (army ? renderTree(army) : "No army runs yet. Start one with /army <task>.") + warning
 }
 
 export default {
@@ -30,7 +30,7 @@ export default {
               title: "Army status",
               description: "Show the agent team tree without a model request",
               group: "Army",
-              slash: { name: "alberts-army-status" },
+              slash: { name: "army-status" },
               palette: true,
               run() {
                 let text: string

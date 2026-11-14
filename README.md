@@ -4,7 +4,7 @@ Chain-of-command multi-agent orchestration for [OpenCode](https://opencode.ai): 
 
 ## How it works
 
-- **General**: the root session. Runs `/alberts-army <task>`, calls `army_mobilize`, and commands officers.
+- **General**: the root session. Runs `/army <task>`, calls `army_mobilize`, and commands officers.
 - **Officers** (`army-officer`): plan a team's work, delegate to soldiers (or sub-officers), merge their branches, and report up. They never edit code.
 - **Soldiers** (`army-soldier`): do one scoped unit of work in their own git worktree, commit it, and report to their officer.
 
@@ -43,15 +43,15 @@ Uninstall:
 ## Usage
 
 ```
-/alberts-army <task>
+/army <task>
 ```
 
 Check a run without a model call:
 
 ```sh
-alberts-army-status            # latest run
-alberts-army-status ses_...    # a specific run
-alberts-army-status --all
+army-status            # latest run
+army-status ses_...    # a specific run
+army-status --all
 ```
 
 Run state is stored in `~/.local/share/opencode/army/` (override with `ARMY_STATE_DIR`).
@@ -62,7 +62,7 @@ Run state is stored in `~/.local/share/opencode/army/` (override with `ARMY_STAT
 plugin/army.ts        plugin: tools + spawn enforcement
 plugin/army-tui/      TUI plugin and tree renderer
 agents/               army-officer and army-soldier playbooks
-commands/             /alberts-army command
+commands/             /army command
 bin/army-status.ts    status CLI
 tests/                bun tests
 ```
