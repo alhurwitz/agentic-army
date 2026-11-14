@@ -252,3 +252,37 @@ describe("setup", () => {
 test("engine exports tool docs for every tool", () => {
   expect(Object.keys(engine.TOOL_DOCS).sort()).toEqual(Object.keys(engine.TOOL_SCHEMAS).sort())
 })
+
+describe("runs are scoped to the repo they started in", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-C", cwd, ...args]).exitCode
+  const repo = () => {
+    const dir = mkdtempSync(join(tmpdir(), "army-repo-"))
+    git(dir, "init", "-q")
+    git(dir, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "init")
+    return dir
+  }
+  const status = (cwd: string, ...args: string[]) =>
+    Bun.spawnSync(["bun", join(import.meta.dir, "..", "bin", "army-status.ts"), ...args], { cwd, env: process.env }).stdout.toString()
+
+  test("mobilize records the main checkout, even from a worktree", () => {
+    const { repoOf } = require("../plugin/army-tui/tree.ts")
+    const main = repo()
+    git(main, "worktree", "add", "-q", "-b", "wt", join(main, ".army", "wt"))
+    expect(repoOf(join(main, ".army", "wt"))).toBe(repoOf(main))
+    const root = uid("scoped")
+    engine.mobilize([root], { maxDepth: 1 }, "claude", join(main, ".army", "wt"))
+    expect(engine.locate([root]).army?.repo).toBe(repoOf(main))
+  })
+
+  test("army-status shows only this repo's runs; --all shows every run", () => {
+    const { repoOf } = require("../plugin/army-tui/tree.ts")
+    const mine = repo()
+    const other = repo()
+    const root = uid("mine")
+    engine.mobilize([root], { maxDepth: 1 }, "claude", mine)
+    expect(status(mine)).toContain(`General ${root}`)
+    expect(status(other)).toContain(`No army runs in ${repoOf(other)}`)
+    expect(status(other, "--all")).toContain(`General ${root}`)
+    expect(status(other, root)).toContain(`General ${root}`)
+  })
+})

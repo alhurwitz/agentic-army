@@ -46,6 +46,7 @@ export type Pending = {
 export type Army = {
   rootID: string
   harness?: string
+  repo?: string
   maxDepth: number
   maxAgents: number
   spawned: number
@@ -70,9 +71,10 @@ export const remaining = (army: Army, node?: Node) => (node ? node.budget - node
 
 export const spawnCost = (child: string, budget = 0) => (child === OFFICER ? 1 + budget : 1)
 
-export const newArmy = (rootID: string, maxDepth: number, maxAgents: number, harness?: string): Army => ({
+export const newArmy = (rootID: string, maxDepth: number, maxAgents: number, harness?: string, repo?: string): Army => ({
   rootID,
   harness,
+  repo,
   maxDepth,
   maxAgents,
   spawned: 0,
