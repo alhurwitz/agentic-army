@@ -173,14 +173,14 @@ describe("mcp server", () => {
 })
 
 describe("setup", () => {
-  const withHome = (fn: (home: string) => void) => {
+  const withHome = async (fn: (home: string) => unknown) => {
     const home = mkdtempSync(join(tmpdir(), "army-home-"))
     const prev = { HOME: process.env.HOME, OPENCODE_CONFIG_DIR: process.env.OPENCODE_CONFIG_DIR, ARMY_BIN_DIR: process.env.ARMY_BIN_DIR }
     process.env.HOME = home
     delete process.env.OPENCODE_CONFIG_DIR
     delete process.env.ARMY_BIN_DIR
     try {
-      fn(home)
+      await fn(home)
     } finally {
       Object.assign(process.env, prev)
       for (const [k, v] of Object.entries(prev)) if (v === undefined) delete process.env[k]
@@ -189,7 +189,7 @@ describe("setup", () => {
   const quiet = () => {}
 
   test("install and uninstall all harnesses keep user config intact", () =>
-    withHome((home) => {
+    withHome(async (home) => {
       mkdirSync(join(home, ".claude"), { recursive: true })
       const userHook = { matcher: "Bash", hooks: [{ type: "command", command: "my-check.sh" }] }
       writeFileSync(join(home, ".claude", "settings.json"), JSON.stringify({ model: "opus", hooks: { PreToolUse: [userHook] } }))
@@ -205,7 +205,6 @@ describe("setup", () => {
       expect(JSON.parse(readFileSync(join(home, ".copilot", "mcp-config.json"), "utf8")).mcpServers.army.type).toBe("local")
       expect(readFileSync(join(home, ".codex", "config.toml"), "utf8")).toContain("[mcp_servers.army]")
       for (const path of [
-        ".config/opencode/plugins/army.ts",
         ".config/opencode/agents/army-officer.md",
         ".claude/agents/army-soldier.md",
         ".claude/commands/army.md",
@@ -217,6 +216,9 @@ describe("setup", () => {
       ])
         expect(lstatSync(join(home, path)).isSymbolicLink()).toBe(true)
 
+      const pluginEntry = join(home, ".config", "opencode", "plugins", "army.ts")
+      expect(lstatSync(pluginEntry).isFile()).toBe(true)
+      expect(typeof (await import(pluginEntry)).default.setup).toBe("function")
       const codexAgent = join(home, ".codex", "agents", "army-officer.toml")
       expect(lstatSync(codexAgent).isFile()).toBe(true)
       expect(readFileSync(codexAgent, "utf8")).toContain('name = "army-officer"')
@@ -233,6 +235,7 @@ describe("setup", () => {
       expect(existsSync(join(home, ".claude", "agents", "army-officer.md"))).toBe(false)
       expect(existsSync(codexAgent)).toBe(false)
       expect(existsSync(join(home, ".local", "bin", "army-status"))).toBe(false)
+      expect(existsSync(pluginEntry)).toBe(false)
     }))
 
   test("rendered playbooks have no placeholders", () => {
