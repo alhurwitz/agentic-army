@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 // Prints army trees from saved state, with no model request.
 // Usage: army-status [rootID] [--all] [--watch]
-//   default: the running army (or the most recently updated one if none is running)
+//   default: runs started in the current repo; the running one, else the most recent
+//   --all: every run, from any repo
 import { statSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { readArmies, renderTree, type SavedArmy } from "../plugin/army-tui/tree.ts"
+import { readArmies, renderTree, repoOf, type SavedArmy } from "../plugin/army-tui/tree.ts"
 
 const dir = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local/share/opencode/army")
 const args = process.argv.slice(2)
@@ -23,18 +24,25 @@ const ago = (ms: number) => {
 
 const running = ({ army }: SavedArmy) => Object.values(army.nodes).filter((n) => n.status === "running").length
 
+const here = repoOf(process.cwd())
+
 const header = (saved: SavedArmy) => {
   const harness = (saved.army as { harness?: string }).harness ?? "opencode"
   const n = running(saved)
-  return `[${harness}] updated ${ago(statSync(saved.file).mtimeMs)} · ${n ? `${n} running` : "finished"}`
+  const where = all ? ` · ${saved.army.repo ?? "unknown repo"}` : ""
+  return `[${harness}] updated ${ago(statSync(saved.file).mtimeMs)} · ${n ? `${n} running` : "finished"}${where}`
 }
 
 const render = () => {
   const { armies, skipped } = readArmies(dir)
   const lines = skipped.map((line) => `warning: skipped ${line}`)
-  const active = armies.filter((saved) => running(saved) > 0)
-  const picked = id ? armies.filter(({ army }) => army.rootID === id) : all ? armies : active.length ? active : armies.slice(0, 1)
-  if (picked.length === 0) return { text: [...lines, id ? `No army run ${id}.` : "No army runs found."].join("\n"), missing: true }
+  const local = armies.filter(({ army }) => army.repo === here)
+  const active = local.filter((saved) => running(saved) > 0)
+  const picked = id ? armies.filter(({ army }) => army.rootID === id) : all ? armies : active.length ? active : local.slice(0, 1)
+  if (picked.length === 0) {
+    const empty = id ? `No army run ${id}.` : all ? "No army runs found." : `No army runs in ${here}. Use --all to see runs from every repo.`
+    return { text: [...lines, empty].join("\n"), missing: true }
+  }
   const note = !id && !all && active.length === 0 ? ["No army is running. Showing the most recent run.", ""] : []
   const trees = picked.map((saved) => `${header(saved)}\n${renderTree(saved.army)}`)
   return { text: [...lines, ...note, trees.join("\n\n")].join("\n"), missing: false }

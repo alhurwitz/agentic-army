@@ -1,6 +1,7 @@
 // Shared by the army server plugin and the army-tui terminal plugin. Keep dependency-free.
+import { execFileSync } from "node:child_process"
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 
 export type TreeNode = {
   sessionID: string
@@ -15,6 +16,7 @@ export type TreeNode = {
 }
 export type TreeOrg = {
   rootID: string
+  repo?: string
   maxDepth: number
   maxAgents: number
   spawned: number
@@ -77,4 +79,18 @@ export const readArmies = (dir: string): { armies: SavedArmy[]; skipped: string[
     }
   }
   return { armies, skipped }
+}
+
+// The main checkout a directory belongs to, so a repo and all its worktrees (including the army's
+// .army/ worktrees) share one key. Outside git, the directory itself.
+export const repoOf = (dir: string) => {
+  try {
+    const common = execFileSync("git", ["-C", dir, "rev-parse", "--path-format=absolute", "--git-common-dir"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim()
+    return common.endsWith("/.git") ? dirname(common) : common
+  } catch {
+    return resolve(dir)
+  }
 }

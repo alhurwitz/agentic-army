@@ -2,7 +2,7 @@
 // their events into these calls. Every mutation goes through withArmy, so separate processes agree.
 import { execFileSync } from "node:child_process"
 
-import { childrenOf, renderTree } from "../plugin/army-tui/tree.ts"
+import { childrenOf, renderTree, repoOf } from "../plugin/army-tui/tree.ts"
 import {
   type Army,
   type Located,
@@ -55,14 +55,15 @@ const sweep = (army: Army, now = Date.now()) => {
   }
 }
 
-export const mobilize = (callerChain: string[], input: { maxDepth?: number; maxAgents?: number }, harness?: string) => {
+export const mobilize = (callerChain: string[], input: { maxDepth?: number; maxAgents?: number }, harness?: string, cwd = process.cwd()) => {
   const sessionID = callerChain[0]
   const { army: existing } = locate(callerChain)
   if (existing && existing.rootID !== sessionID) return `Not started: this session is already inside army ${existing.rootID}. Delegate within it.`
   const maxDepth = Math.max(1, Math.trunc(Number(input.maxDepth ?? DEFAULT_MAX_DEPTH)))
   const maxAgents = Math.max(1, Math.trunc(Number(input.maxAgents ?? DEFAULT_MAX_AGENTS)))
   const army = withArmy(sessionID, (saved) => {
-    const army = saved ? Object.assign(saved, { maxDepth, maxAgents }) : newArmy(sessionID, maxDepth, maxAgents, harness)
+    const repo = repoOf(cwd)
+    const army = saved ? Object.assign(saved, { maxDepth, maxAgents, repo: saved.repo ?? repo }) : newArmy(sessionID, maxDepth, maxAgents, harness, repo)
     return { save: army, result: army }
   })
   return (

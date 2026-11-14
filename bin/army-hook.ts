@@ -74,7 +74,7 @@ export const handle = (harness: Harness, raw: any): Out => {
   if (e.agentID && e.agentType && e.event !== "SubagentStart") void engine.bindByType([e.sessionID], e.agentID, e.agentType, e.parentAgentID)
 
   if (e.event === "PreToolUse" && ARMY_TOOL.test(e.toolName)) {
-    return rewrite(harness, { ...input, _caller: chainOf(e) })
+    return rewrite(harness, { ...input, _caller: chainOf(e), ...(raw.cwd ? { _cwd: String(raw.cwd) } : {}) })
   }
 
   if (e.event === "PreToolUse" && isSpawnTool(e.toolName)) {
