@@ -72,8 +72,9 @@ In Copilot CLI, ask to "run this as an army" (the `army` skill).
 Check a run without a model call:
 
 ```sh
-army-status            # latest run
+army-status            # running army, else the latest run
 army-status <rootID>   # a specific run
+army-status --watch    # live view, refreshes every 2s
 army-status --all
 ```
 
