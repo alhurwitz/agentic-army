@@ -17,7 +17,7 @@ const CALLER = {
 const tools = Object.entries(engine.TOOL_SCHEMAS).map(([name, schema]) => ({
   name,
   description: engine.TOOL_DOCS[name as keyof typeof engine.TOOL_DOCS],
-  inputSchema: { type: "object", properties: { ...(schema as any).properties, _caller: CALLER }, required: (schema as any).required ?? [] },
+  inputSchema: { type: "object", properties: { ...(schema as any).properties, _caller: CALLER, _cwd: { type: "string", description: "Filled in automatically by the army hook. Leave empty." } }, required: (schema as any).required ?? [] },
 }))
 
 const harness = process.argv[2]
@@ -26,7 +26,7 @@ export const callTool = async (name: string, args: any): Promise<string> => {
   if (name === "army_check") return engine.check(String(args?.worktree ?? ""))
   const chain: string[] = Array.isArray(args?._caller) ? args._caller.filter((id: unknown) => typeof id === "string" && id) : []
   if (chain.length === 0) return "army hook not installed for this tool, so the caller is unknown. Run the agentic-army install.sh for this harness."
-  if (name === "army_mobilize") return engine.mobilize(chain, { maxDepth: args?.maxDepth, maxAgents: args?.maxAgents }, harness)
+  if (name === "army_mobilize") return engine.mobilize(chain, { maxDepth: args?.maxDepth, maxAgents: args?.maxAgents }, harness, typeof args?._cwd === "string" ? args._cwd : process.cwd())
   if (name === "army_status") return engine.statusText(chain)
   if (name === "army_wait") return engine.wait(chain, args?.mode === "all" ? "all" : "any", Number(args?.timeoutMinutes ?? 30) * 60_000)
   throw new Error(`unknown tool ${name}`)

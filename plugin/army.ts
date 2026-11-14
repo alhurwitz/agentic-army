@@ -77,7 +77,8 @@ const Army = {
         input: engine.TOOL_SCHEMAS.army_mobilize,
         async execute(input: any, toolContext: any) {
           const merged = { maxDepth: input.maxDepth ?? options.maxDepth, maxAgents: input.maxAgents ?? options.maxAgents }
-          return { content: engine.mobilize(await chainOf(toolContext.sessionID), merged, "opencode") }
+          const dir = toolContext.directory ?? toolContext.worktree ?? ctx.directory ?? process.cwd()
+          return { content: engine.mobilize(await chainOf(toolContext.sessionID), merged, "opencode", dir) }
         },
       })
       editor.add({

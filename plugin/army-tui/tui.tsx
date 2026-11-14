@@ -1,19 +1,20 @@
 /** @jsxImportSource @opentui/solid */
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { readArmies, renderTree } from "./tree.ts"
+import { readArmies, renderTree, repoOf } from "./tree.ts"
 
 // V2 TUI plugin: default export { id, setup }. Commands are registered from an "app" slot,
 // the same way the built-in /stats command does it. @opentui/solid is supplied by the host.
 const DIR = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local/share/opencode/army")
 
-// Prefer the army this session belongs to (as root or member); fall back to the latest run.
+// Prefer the army this session belongs to (as root or member); else the latest run in this repo.
 const statusText = (sessionID: string | undefined) => {
   const { armies, skipped } = readArmies(DIR)
   const list = armies.map(({ army }) => army)
-  const army = list.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? list[0]
+  const here = repoOf(process.cwd())
+  const army = list.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? list.find((o) => o.repo === here)
   const warning = skipped.length ? `\n\nSkipped ${skipped.length} unreadable state file(s).` : ""
-  return (army ? renderTree(army) : "No army runs yet. Start one with /army <task>.") + warning
+  return (army ? renderTree(army) : `No army runs in ${here} yet. Start one with /army <task>.`) + warning
 }
 
 export default {
