@@ -24,8 +24,6 @@ unlink_if_ours "$CONFIG/agents/army-officer.md"
 unlink_if_ours "$CONFIG/agents/army-soldier.md"
 unlink_if_ours "$CONFIG/commands/army.md"
 unlink_if_ours "$BIN/army-status"
-unlink_if_ours "$CONFIG/commands/alberts-army.md"
-unlink_if_ours "$BIN/alberts-army-status"
 
 if [ -f "$CONFIG/cli.json" ] && command -v bun >/dev/null; then
   CLI_JSON="$CONFIG/cli.json" TUI_PATH="$CONFIG/plugins/army-tui" bun -e '
