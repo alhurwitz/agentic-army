@@ -70,6 +70,11 @@ beforeEach(async () => {
 })
 
 describe("chain of command", () => {
+  test("maxDepth defaults to 5", async () => {
+    const out = await h.tools.army_mobilize.execute({}, { sessionID: h.root })
+    expect(out.content).toContain("maxDepth=5")
+  })
+
   test("depth is not capped at 5", async () => {
     await h.mobilize(8, 50)
     let parent = h.root
