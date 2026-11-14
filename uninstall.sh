@@ -25,6 +25,19 @@ unlink_if_ours "$CONFIG/agents/army-soldier.md"
 unlink_if_ours "$CONFIG/commands/alberts-army.md"
 unlink_if_ours "$BIN/alberts-army-status"
 
+if [ -f "$CONFIG/cli.json" ] && command -v bun >/dev/null; then
+  CLI_JSON="$CONFIG/cli.json" TUI_PATH="$CONFIG/plugins/army-tui" bun -e '
+    const fs = require("node:fs")
+    const file = process.env.CLI_JSON, pkg = process.env.TUI_PATH
+    const data = JSON.parse(fs.readFileSync(file, "utf8"))
+    const before = data.plugins?.length ?? 0
+    data.plugins = (data.plugins ?? []).filter((p) => p.package !== pkg)
+    if (data.plugins.length === before) process.exit(0)
+    fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n")
+    console.log(`unregistered TUI plugin from ${file}`)
+  '
+fi
+
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$STATE"
   echo "removed run state $STATE"

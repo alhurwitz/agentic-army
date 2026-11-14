@@ -36,4 +36,18 @@ link "$REPO/commands/alberts-army.md" "$CONFIG/commands/alberts-army.md"
 link "$REPO/bin/army-status.ts" "$BIN/alberts-army-status"
 
 case ":$PATH:" in *":$BIN:"*) ;; *) echo "note: $BIN is not on PATH" ;; esac
+
+# Register the TUI plugin in cli.json (backed up first; no-op if already present).
+CLI_JSON="$CONFIG/cli.json" TUI_PATH="$CONFIG/plugins/army-tui" bun -e '
+  const fs = require("node:fs")
+  const file = process.env.CLI_JSON, pkg = process.env.TUI_PATH
+  const data = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {}
+  data.plugins ??= []
+  if (data.plugins.some((p) => p.package === pkg)) process.exit(0)
+  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak-army`)
+  data.plugins.push({ package: pkg })
+  fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n")
+  console.log(`registered TUI plugin in ${file}`)
+'
+
 echo "Done. Restart OpenCode to load the plugin."
