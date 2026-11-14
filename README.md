@@ -12,7 +12,7 @@ The plugin enforces the structure:
 
 | Rule | Enforcement |
 | --- | --- |
-| Depth | At most `maxDepth` (1-5) levels below the General; the leaf level is soldiers only. |
+| Depth | At most `maxDepth` levels below the General: default 5, any larger value on request (`maxAgents` bounds total size); the leaf level is soldiers only. |
 | Chain of command | With `maxDepth >= 2`, the General spawns officers only. Untracked sessions cannot command troops. |
 | Promotion | A soldier that spawns is promoted to officer and borrows the spawn cost from its parent's budget. |
 | Span of control | At most 5 running direct reports per commander. |
@@ -44,6 +44,7 @@ Uninstall:
 
 ```
 /army <task>
+/army depth 8: <task>    # ask for a deeper chain
 ```
 
 Check a run without a model call:

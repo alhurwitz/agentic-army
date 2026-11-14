@@ -2,7 +2,7 @@
 // built-in `subagent` tool to `army-officer` / `army-soldier` agents. This plugin enforces the
 // shape of the tree, tracks every child, and accounts per-team budgets.
 // Rules (checked on every subagent call made inside an army):
-//   - depth of root = 0; children may go at most maxDepth (<= 5) levels below root
+//   - depth of root = 0; children may go at most maxDepth levels below root (default 5, no upper cap; maxAgents bounds size)
 //   - children must be army-officer or army-soldier; leaf level (depth == maxDepth) is soldier only
 //   - the General (depth 0) spawns officers only unless maxDepth == 1
 //   - a soldier that spawns is promoted to officer; it borrows the cost of each spawn from its parent
@@ -19,8 +19,8 @@ import { join } from "node:path"
 
 import { childrenOf, elapsed, readArmies, renderTree } from "./army-tui/tree.ts"
 
-const HARD_MAX_DEPTH = 5
 const DEFAULT_MAX_AGENTS = 50
+const DEFAULT_MAX_DEPTH = 5
 const MAX_SPAN = 5
 const MANAGER = "army-officer"
 const IC = "army-soldier"
@@ -235,7 +235,9 @@ const Army = {
     const locate = async (sessionID: string): Promise<Located> => {
       const caller = await getSession(sessionID)
       let current = caller
-      for (let steps = 0; current && steps <= HARD_MAX_DEPTH + 1; steps++) {
+      const seen = new Set<string>()
+      for (let steps = 0; current && !seen.has(current.id); steps++) {
+        seen.add(current.id)
         const hit = known(current.id)
         if (hit) return steps === 0 ? { ...hit, agent: hit.agent ?? caller?.agent } : { army: hit.army, depth: hit.depth + steps, agent: caller?.agent }
         if (!current.parentID) break
@@ -311,7 +313,7 @@ const Army = {
       if (existing && existing.rootID !== sessionID) {
         return `Not started: this session is already inside army ${existing.rootID}. Delegate within it.`
       }
-      const maxDepth = Math.min(HARD_MAX_DEPTH, Math.max(1, Math.trunc(Number(input.maxDepth))))
+      const maxDepth = Math.max(1, Math.trunc(Number(input.maxDepth ?? ctx.options?.maxDepth ?? DEFAULT_MAX_DEPTH)))
       const maxAgents = Math.max(1, Math.trunc(Number(input.maxAgents ?? ctx.options?.maxAgents ?? DEFAULT_MAX_AGENTS)))
       const army: Army = existing
         ? Object.assign(existing, { maxDepth, maxAgents })
@@ -344,16 +346,15 @@ const Army = {
         name: "army_mobilize",
         description:
           "Start a hierarchical team run rooted at this session. Call once before delegating to army-officer / army-soldier subagents. " +
-          "Pick maxDepth (1-5) from the task size. Default 2: General -> officers -> soldiers. 1 = General directs up to " + MAX_SPAN + " soldiers (tiny tasks only); each extra level adds an officer layer. " +
+          "maxDepth defaults to " + DEFAULT_MAX_DEPTH + " levels below the General; pass a larger value only if the user asked for it, or 1 for a tiny task (General directs up to " + MAX_SPAN + " soldiers). " +
           "maxAgents caps total spawned agents (default 50) unless the user asked for a different cap.",
         input: {
           type: "object",
           properties: {
-            maxDepth: { type: "integer", minimum: 1, maximum: HARD_MAX_DEPTH, description: "Levels below the root, 1-5" },
+            maxDepth: { type: "integer", minimum: 1, description: `Levels below the root, default ${DEFAULT_MAX_DEPTH}; any value >= 1` },
             maxAgents: { type: "integer", minimum: 1, description: `Total agent budget, default ${DEFAULT_MAX_AGENTS}` },
           },
-          required: ["maxDepth"],
-          additionalProperties: false,
+                    additionalProperties: false,
         },
         async execute(input: any, toolContext: any) {
           return { content: await startOrg(input, toolContext.sessionID) }

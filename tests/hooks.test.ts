@@ -70,6 +70,20 @@ beforeEach(async () => {
 })
 
 describe("chain of command", () => {
+  test("maxDepth defaults to 5", async () => {
+    const out = await h.tools.army_mobilize.execute({}, { sessionID: h.root })
+    expect(out.content).toContain("maxDepth=5")
+  })
+
+  test("depth is not capped at 5", async () => {
+    await h.mobilize(8, 50)
+    let parent = h.root
+    for (let i = 0; i < 7; i++) parent = await h.spawn(parent, "army-officer", `TROOPS: ${40 - i * 5}\ngo`)
+    const leaf = await h.spawn(parent, "army-soldier")
+    expect(h.state().nodes[leaf].depth).toBe(8)
+    expect(h.state().maxDepth).toBe(8)
+  })
+
   test("army children need army_mobilize first", async () => {
     await expect(h.spawn(h.root, "army-soldier")).rejects.toThrow(/army_mobilize/)
   })
