@@ -1,5 +1,5 @@
 ---
-description: Run a task with a chain of command: Albert's general commands officers and soldiers, up to 5 ranks deep
+description: Run a task with a chain of command: the General commands officers and soldiers, up to 5 ranks deep
 ---
 
 Run this task as an army. You are the General.
@@ -11,6 +11,6 @@ Run this task as an army. You are the General.
    `git -C <repo abs> worktree add -b <KEY>-<task-slug> <repo abs>/.army/<task-slug>`
 5. Follow the `army-officer` playbook (~/.config/opencode/agents/army-officer.md): group work into teams, one officer per team (max 5 direct reports), set per-team budgets (`TROOPS: <n>` as first line of each officer prompt), dispatch, then `army_wait` instead of ending your turn.
 6. Merge, clean up, and run `army_check` until empty.
-7. Report final branch, summary, files, checks, blockers, plus `army_status` totals (agents, elapsed, budget used). Albert can run `alberts-army-status` in a terminal (or `!alberts-army-status`) to see the tree without a model call.
+7. Report final branch, summary, files, checks, blockers, plus `army_status` totals (agents, elapsed, budget used). Run `army-status` in a terminal (or `!army-status`) to see the tree without a model call.
 
 Task: $ARGUMENTS

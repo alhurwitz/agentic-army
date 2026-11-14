@@ -22,6 +22,8 @@ unlink_if_ours "$CONFIG/plugins/army.ts"
 unlink_if_ours "$CONFIG/plugins/army-tui"
 unlink_if_ours "$CONFIG/agents/army-officer.md"
 unlink_if_ours "$CONFIG/agents/army-soldier.md"
+unlink_if_ours "$CONFIG/commands/army.md"
+unlink_if_ours "$BIN/army-status"
 unlink_if_ours "$CONFIG/commands/alberts-army.md"
 unlink_if_ours "$BIN/alberts-army-status"
 

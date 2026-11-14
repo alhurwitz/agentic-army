@@ -28,12 +28,17 @@ link() {
   echo "linked $dest -> $src"
 }
 
+# Remove links from the old command name (alberts-army) if they point into this repo.
+for old in "$CONFIG/commands/alberts-army.md" "$BIN/alberts-army-status"; do
+  if [ -L "$old" ] && [[ "$(readlink "$old")" == "$REPO"/* ]]; then rm "$old"; echo "removed old link $old"; fi
+done
+
 link "$REPO/plugin/army.ts" "$CONFIG/plugins/army.ts"
 link "$REPO/plugin/army-tui" "$CONFIG/plugins/army-tui"
 link "$REPO/agents/army-officer.md" "$CONFIG/agents/army-officer.md"
 link "$REPO/agents/army-soldier.md" "$CONFIG/agents/army-soldier.md"
-link "$REPO/commands/alberts-army.md" "$CONFIG/commands/alberts-army.md"
-link "$REPO/bin/army-status.ts" "$BIN/alberts-army-status"
+link "$REPO/commands/army.md" "$CONFIG/commands/army.md"
+link "$REPO/bin/army-status.ts" "$BIN/army-status"
 
 case ":$PATH:" in *":$BIN:"*) ;; *) echo "note: $BIN is not on PATH" ;; esac
 
