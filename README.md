@@ -33,7 +33,7 @@ Tools: `army_mobilize`, `army_status`, `army_wait`, `army_check`.
 Notes:
 
 - Claude Code limits nesting to 3 subagent layers by default. The installer sets `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=20` (unless you already set it) so the army's own `maxDepth` decides.
-- Codex asks you to review new hooks: open `/hooks` and trust the army hooks after installing.
+- Codex asks you to review new hooks: open `/hooks` and trust the army hooks after installing. Codex ignores symlinked agent files, so its agents are copied (re-run `./install.sh codex` after pulling). Codex encrypts spawn messages, so officers get their budget from a `_troops_<n>` suffix on `task_name`, and children get the army preamble at start-up.
 - The hooks pass the caller's identity to the army MCP tools. Without the hooks, the MCP tools refuse to run.
 - Hooks fail open: if the hook command crashes, the tool call goes ahead. Only rule violations are blocked.
 

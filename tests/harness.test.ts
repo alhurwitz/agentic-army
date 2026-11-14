@@ -113,6 +113,27 @@ describe("hook: codex", () => {
   })
 })
 
+describe("hook: codex encrypted spawn", () => {
+  test("namespaced tool, budget from task_name, preamble via SubagentStart", async () => {
+    const s = session("codex")
+    await s.army("army_mobilize", { maxDepth: 2, maxAgents: 10 })
+    const base = { session_id: s.sessionID, hook_event_name: "PreToolUse", tool_name: "collaborationspawn_agent" }
+    const secret = "gAAAAABq-Fr4h_-_d41gGLpeoi5ZLbd0lpSxAeB35Wu4YY6jKIlJW4a"
+
+    const noBudget = handle("codex", { ...base, tool_use_id: uid("tu"), tool_input: { agent_type: "army-officer", message: secret } }) as any
+    expect(noBudget.hookSpecificOutput.permissionDecision).toBe("deny")
+    expect(noBudget.hookSpecificOutput.permissionDecisionReason).toContain("task_name")
+
+    const ok = handle("codex", { ...base, tool_use_id: uid("tu"), tool_input: { agent_type: "army-officer", task_name: "team_api_troops_3", message: secret } })
+    expect(ok).toBeUndefined()
+
+    const start = handle("codex", { session_id: s.sessionID, hook_event_name: "SubagentStart", agent_id: "cdxOff", agent_type: "army-officer" }) as any
+    expect(start.hookSpecificOutput.additionalContext).toContain("[army] You are army-officer at depth 1/2")
+    expect(start.hookSpecificOutput.additionalContext).toContain("Budget left: 3")
+    expect(await s.army("army_status", {})).toContain('officer "team_api_troops_3" running')
+  })
+})
+
 describe("hook helpers", () => {
   test("findAgentID handles objects, nested, and JSON strings", () => {
     expect(findAgentID({ agentId: "abc123" })).toBe("abc123")
@@ -191,14 +212,18 @@ describe("setup", () => {
         ".copilot/agents/army-officer.agent.md",
         ".copilot/skills/army",
         ".copilot/hooks/army.json",
-        ".codex/agents/army-officer.toml",
         ".codex/prompts/army.md",
         ".local/bin/army-status",
       ])
         expect(lstatSync(join(home, path)).isSymbolicLink()).toBe(true)
 
+      const codexAgent = join(home, ".codex", "agents", "army-officer.toml")
+      expect(lstatSync(codexAgent).isFile()).toBe(true)
+      expect(readFileSync(codexAgent, "utf8")).toContain('name = "army-officer"')
+
       setup.install([...setup.HARNESSES], quiet)
       expect(JSON.parse(readFileSync(join(home, ".claude", "settings.json"), "utf8")).hooks.PreToolUse).toHaveLength(2)
+      expect(existsSync(join(home, ".codex", "agents", ".army-backup"))).toBe(false)
 
       setup.uninstall([...setup.HARNESSES], quiet)
       const after = JSON.parse(readFileSync(join(home, ".claude", "settings.json"), "utf8"))
@@ -206,6 +231,7 @@ describe("setup", () => {
       expect(after.env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH).toBeUndefined()
       expect(readFileSync(join(home, ".codex", "config.toml"), "utf8")).toBe('model = "x"\n')
       expect(existsSync(join(home, ".claude", "agents", "army-officer.md"))).toBe(false)
+      expect(existsSync(codexAgent)).toBe(false)
       expect(existsSync(join(home, ".local", "bin", "army-status"))).toBe(false)
     }))
 
