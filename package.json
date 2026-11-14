@@ -1,0 +1,15 @@
+{
+  "name": "agentic-army",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chain-of-command multi-agent orchestration for OpenCode: General → officers → soldiers, with enforced budgets and per-agent git worktrees.",
+  "bin": {
+    "army-status": "./bin/army-status.ts"
+  },
+  "scripts": {
+    "test": "bun test tests",
+    "install:opencode": "./install.sh"
+  },
+  "license": "MIT"
+}
