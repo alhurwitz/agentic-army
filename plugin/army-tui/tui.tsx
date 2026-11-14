@@ -1,27 +1,19 @@
 /** @jsxImportSource @opentui/solid */
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { renderTree, type TreeOrg } from "./tree.ts"
+import { readArmies, renderTree } from "./tree.ts"
 
 // V2 TUI plugin: default export { id, setup }. Commands are registered from an "app" slot,
 // the same way the built-in /stats command does it. @opentui/solid is supplied by the host.
-const DIR = join(homedir(), ".local/share/opencode/army")
-
-const loadOrgs = (): TreeOrg[] =>
-  existsSync(DIR)
-    ? readdirSync(DIR)
-        .filter((file) => file.endsWith(".json"))
-        .map((file) => join(DIR, file))
-        .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)
-        .map((file) => JSON.parse(readFileSync(file, "utf8")))
-    : []
+const DIR = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local/share/opencode/army")
 
 // Prefer the army this session belongs to (as root or member); fall back to the latest run.
 const statusText = (sessionID: string | undefined) => {
-  const armies = loadOrgs()
-  const army = armies.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? armies[0]
-  return army ? renderTree(army) : "No army runs yet. Start one with /alberts-army <task>."
+  const { armies, skipped } = readArmies(DIR)
+  const list = armies.map(({ army }) => army)
+  const army = list.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? list[0]
+  const warning = skipped.length ? `\n\nSkipped ${skipped.length} unreadable state file(s).` : ""
+  return (army ? renderTree(army) : "No army runs yet. Start one with /alberts-army <task>.") + warning
 }
 
 export default {

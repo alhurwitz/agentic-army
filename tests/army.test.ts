@@ -3,7 +3,7 @@ import Army from "../plugin/army.ts"
 
 const { parseBudget, remaining, spawnCost, settle, renderTree, childSessionID, orgWorktrees, childBranches } = Army.logic
 
-const makeOrg = () => ({ rootID: "ses_root", maxDepth: 2, maxAgents: 10, spawned: 0, managers: 0, ics: 0, used: 0, nodes: {} as Record<string, any> })
+const makeOrg = () => ({ rootID: "ses_root", maxDepth: 2, maxAgents: 10, spawned: 0, officers: 0, ics: 0, used: 0, nodes: {} as Record<string, any> })
 const node = (over: Record<string, any>) => ({
   sessionID: "ses_m",
   parentID: "ses_root",

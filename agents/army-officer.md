@@ -29,6 +29,7 @@ You manage one team inside a hierarchical army. The root session follows this sa
 - An soldier costs 1. An `army-officer` costs 1 + n, where n is its team budget.
 - When spawning an `army-officer`, the prompt's FIRST line must be `TROOPS: <n>` (max agents that subtree may spawn). Size n to the work.
 - Unused budget returns when a child finishes. `army_status` prints the full tree (roles, status, elapsed, budgets).
+- A soldier that splits its unit is promoted to officer and borrows what it needs from your remaining budget. Keep slack if a unit may grow.
 
 ## Jira
 - Never create a top-level card; the root resolved it. Pass `JIRA: <KEY>` in every child brief.

@@ -3,26 +3,28 @@
 // shape of the tree, tracks every child, and accounts per-team budgets.
 // Rules (checked on every subagent call made inside an army):
 //   - depth of root = 0; children may go at most maxDepth (<= 5) levels below root
-//   - army-soldier never spawns; army-officer only spawns when the child is above the soldier level
 //   - children must be army-officer or army-soldier; leaf level (depth == maxDepth) is soldier only
 //   - the General (depth 0) spawns officers only unless maxDepth == 1
+//   - a soldier that spawns is promoted to officer; it borrows the cost of each spawn from its parent
+//   - an army member the plugin cannot identify may not spawn army children
 //   - every commander has at most MAX_SPAN running direct reports
 //   - a officer spawn needs `TROOPS: <n>` as the prompt's first line; it costs the parent 1 + n,
 //     a soldier costs 1; a finished officer returns its unused allotment to its parent
 //   - every new child also counts against the global maxAgents cap; follow-ups do not
+//   - non-army subagents (explore, general, ...) spawned by the General are not tracked or counted
 import { execFileSync } from "node:child_process"
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, renameSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-import { childrenOf, elapsed, renderTree } from "./army-tui/tree.ts"
+import { childrenOf, elapsed, readArmies, renderTree } from "./army-tui/tree.ts"
 
 const HARD_MAX_DEPTH = 5
 const DEFAULT_MAX_AGENTS = 50
 const MAX_SPAN = 5
 const MANAGER = "army-officer"
 const IC = "army-soldier"
-const STORE = join(homedir(), ".local", "share", "opencode", "army")
+const STORE = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local", "share", "opencode", "army")
 const BUDGET_LINE = /^\s*TROOPS:\s*(\d+)\s*$/
 const EVENT_STATUS: Record<string, Status> = {
   "session.execution.started": "running",
@@ -43,6 +45,7 @@ type Node = {
   endedAt?: number
   budget: number
   used: number
+  promoted?: boolean
 }
 type Army = {
   rootID: string
@@ -55,7 +58,6 @@ type Army = {
   nodes: Record<string, Node>
 }
 type Session = { id: string; agent?: string; parentID?: string }
-type Located = { army?: Army; depth: number; agent?: string; node?: Node }
 
 const parseBudget = (prompt: string) => {
   const [first, ...rest] = prompt.split("\n")
@@ -77,6 +79,84 @@ const settle = (army: Army, node: Node) => {
   if (parent) parent.used -= unused
   else army.used -= unused
   return unused
+}
+
+type Located = { army?: Army; depth: number; agent?: string; node?: Node }
+
+const isArmyAgent = (agent: string) => agent === MANAGER || agent === IC
+
+const validateShape = ({ army, agent, depth, node }: Located, child: string) => {
+  if (!army) return isArmyAgent(child) ? `call army_mobilize before delegating to ${child}.` : undefined
+  if (!isArmyAgent(child)) return depth === 0 ? undefined : `inside an army, delegate only to "${MANAGER}" or "${IC}" (got "${child}").`
+  if (depth > 0 && !node) return `this session is not a tracked army member, so it cannot command troops. Do the work yourself or report to your officer.`
+  if (depth + 1 > army.maxDepth) return `depth limit ${army.maxDepth} reached. Do this work yourself.`
+  if (child === MANAGER && depth + 1 === army.maxDepth) return `depth ${depth + 1} is the soldier level (maxDepth ${army.maxDepth}); spawn "${IC}" instead.`
+  if (child === IC && depth === 0 && army.maxDepth > 1) return `the General commands officers, not soldiers. Spawn "${MANAGER}" team leads; they command the soldiers.`
+  if (agent !== MANAGER && agent !== IC && depth > 0) return `unknown army role "${agent}".`
+  return undefined
+}
+
+const validateSpan = (army: Army, parentID: string, queued = 0) => {
+  const active = Object.values(army.nodes).filter((n) => n.parentID === parentID && n.status === "running").length
+  if (active + queued >= MAX_SPAN) return `span of control is ${MAX_SPAN} direct reports. Wait for one to finish (army_wait), or group the work under an "${MANAGER}".`
+  return undefined
+}
+
+// A soldier (or a soldier already promoted) may borrow from its parent what its own budget lacks.
+const shortfall = (army: Army, node: Node | undefined, cost: number) =>
+  node && (node.agent === IC || node.promoted) ? Math.max(0, cost - remaining(army, node)) : 0
+
+const parentOf = (army: Army, node: Node) => army.nodes[node.parentID]
+
+const validateBudget = (army: Army, node: Node | undefined, child: string, budget: number | undefined) => {
+  if (child === MANAGER && budget === undefined) return `a ${MANAGER} prompt must start with the line "TROOPS: <n>" (agents its subtree may spawn).`
+  const cost = spawnCost(child, budget)
+  if (army.spawned >= army.maxAgents) return `global agent cap ${army.maxAgents} used up. Reuse existing children via sessionID or do the work yourself.`
+  const borrow = shortfall(army, node, cost)
+  const available = node ? remaining(army, node) + (borrow ? remaining(army, parentOf(army, node)) : 0) : remaining(army)
+  if (cost > available) return `spawning this ${child} costs ${cost} but your budget has ${available} left. Lower TROOPS, reuse children, or do the work yourself.`
+  return undefined
+}
+
+// Promotes a spawning soldier to officer and moves any borrowed budget from its parent to it.
+const promote = (army: Army, node: Node, cost: number) => {
+  const borrow = shortfall(army, node, cost)
+  if (node.agent === IC) {
+    node.agent = MANAGER
+    node.promoted = true
+    army.ics--
+    army.officers++
+  }
+  if (borrow === 0) return
+  node.budget += borrow
+  const parent = parentOf(army, node)
+  if (parent) parent.used += borrow
+  else army.used += borrow
+}
+
+const charge = (army: Army, node: Node | undefined, child: string, cost: number) => {
+  if (node) {
+    promote(army, node, cost)
+    node.used += cost
+  } else army.used += cost
+  army.spawned++
+  if (child === MANAGER) army.officers++
+  else army.ics++
+}
+
+const refund = (army: Army, parentID: string, child: string, cost: number) => {
+  const parent = army.nodes[parentID]
+  if (parent) parent.used -= cost
+  else army.used -= cost
+  army.spawned--
+  if (child === MANAGER) army.officers--
+  else army.ics--
+}
+
+const writeAtomic = (file: string, data: string) => {
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
+  writeFileSync(tmp, data)
+  renameSync(tmp, file)
 }
 
 const textOf = (result: any): string => {
@@ -107,7 +187,10 @@ const git = (cwd: string, ...args: string[]) => execFileSync("git", ["-C", cwd, 
 
 const Army = {
   id: "army",
-  logic: { parseBudget, remaining, spawnCost, settle, renderTree, childSessionID, orgWorktrees, childBranches },
+  logic: {
+    parseBudget, remaining, spawnCost, settle, renderTree, childSessionID, orgWorktrees, childBranches,
+    validateShape, validateSpan, validateBudget, charge, refund, writeAtomic, MAX_SPAN,
+  },
   async setup(ctx) {
     const armies = new Map<string, Army>()
     const owners = new Map<string, Army>()
@@ -117,7 +200,7 @@ const Army = {
 
     const save = (army: Army) => {
       mkdirSync(STORE, { recursive: true })
-      writeFileSync(join(STORE, `${army.rootID}.json`), JSON.stringify(army, null, 2))
+      writeAtomic(join(STORE, `${army.rootID}.json`), JSON.stringify(army, null, 2))
       for (const waiter of waiters) waiter()
     }
 
@@ -128,11 +211,9 @@ const Army = {
 
     const load = () => {
       mkdirSync(STORE, { recursive: true })
-      for (const file of readdirSync(STORE).filter((name) => name.endsWith(".json"))) {
-        try {
-          register({ used: 0, nodes: {}, ...JSON.parse(readFileSync(join(STORE, file), "utf8")) })
-        } catch {}
-      }
+      const { armies: saved, skipped } = readArmies(STORE)
+      for (const { army } of saved) register({ used: 0, ...army } as Army)
+      for (const line of skipped) console.warn(`[army] skipping unreadable state ${line}`)
     }
     load()
 
@@ -327,32 +408,6 @@ const Army = {
     })
 
 
-    const validate = (located: Located, child: string) => {
-      const { army, agent, depth } = located
-      if (!army) return child === MANAGER || child === IC ? `call army_mobilize before delegating to ${child}.` : undefined
-      if (agent === IC) return `army-soldier does not delegate. Do the work yourself and report to your officer.`
-      if (child !== MANAGER && child !== IC) return depth === 0 ? undefined : `inside an army, delegate only to "${MANAGER}" or "${IC}" (got "${child}").`
-      if (depth + 1 > army.maxDepth) return `depth limit ${army.maxDepth} reached. Do this work yourself or have a soldier at your level do it.`
-      if (child === MANAGER && depth + 1 === army.maxDepth) return `depth ${depth + 1} is the soldier level (maxDepth ${army.maxDepth}); spawn "${IC}" instead.`
-      if (child === IC && depth === 0 && army.maxDepth > 1) return `the General commands officers, not soldiers. Spawn "${MANAGER}" team leads; they command the soldiers.`
-      return undefined
-    }
-
-    const validateSpan = (army: Army, parentID: string) => {
-      const active = Object.values(army.nodes).filter((n) => n.parentID === parentID && n.status === "running").length
-      const queued = [...pending.values()].filter((p) => p.parentID === parentID).length
-      if (active + queued >= MAX_SPAN) return `span of control is ${MAX_SPAN} direct reports. Wait for one to finish (army_wait), or group the work under an "${MANAGER}".`
-      return undefined
-    }
-
-    const validateBudget = (army: Army, node: Node | undefined, child: string, budget: number | undefined) => {
-      if (child === MANAGER && budget === undefined) return `a ${MANAGER} prompt must start with the line "TROOPS: <n>" (agents its subtree may spawn).`
-      const cost = spawnCost(child, budget)
-      if (army.spawned >= army.maxAgents) return `global agent cap ${army.maxAgents} used up. Reuse existing children via sessionID or do the work yourself.`
-      if (cost > remaining(army, node)) return `spawning this ${child} costs ${cost} but your budget has ${remaining(army, node)} left. Lower TROOPS, reuse children, or do the work yourself.`
-      return undefined
-    }
-
     const childPreamble = (army: Army, child: string, depth: number, budget: number) =>
       `[army] You are ${child} at depth ${depth}/${army.maxDepth}` +
       `${child === MANAGER ? `; your children may be ${depth + 1 === army.maxDepth ? `"${IC}" only` : `"${MANAGER}" or "${IC}"`}` : ""}. ` +
@@ -363,35 +418,24 @@ const Army = {
       const input = event.input ?? {}
       const child = String(input.agent ?? "")
       const located = await locate(event.sessionID)
-      const shapeError = located.army && input.sessionID && located.agent !== IC ? undefined : validate(located, child)
+      if (located.army && input.sessionID) return
+      const shapeError = validateShape(located, child)
       if (shapeError) throw new Error(`[army] BLOCKED: ${shapeError}`)
       const army = located.army
-      if (!army || input.sessionID) return
+      if (!army || !isArmyAgent(child)) return
 
       const parsed = parseBudget(String(input.prompt ?? ""))
-      const budgetError = validateSpan(army, event.sessionID) ?? validateBudget(army, located.node, child, parsed.budget)
+      const queued = [...pending.values()].filter((p) => p.parentID === event.sessionID).length
+      const budgetError = validateSpan(army, event.sessionID, queued) ?? validateBudget(army, located.node, child, parsed.budget)
       if (budgetError) throw new Error(`[army] BLOCKED: ${budgetError}`)
 
       const budget = child === MANAGER ? (parsed.budget ?? 0) : 0
       const cost = spawnCost(child, budget)
-      if (located.node) located.node.used += cost
-      else army.used += cost
-      army.spawned++
-      if (child === MANAGER) army.officers++
-      else army.ics++
+      charge(army, located.node, child, cost)
       pending.set(spawnKey(event.sessionID, input), { army, child, parentID: event.sessionID, depth: located.depth + 1, budget, cost })
       input.prompt = childPreamble(army, child, located.depth + 1, budget) + parsed.prompt
       save(army)
     })
-
-    const refund = (spawn: { army: Army; child: string; parentID: string; cost: number }) => {
-      const parent = spawn.army.nodes[spawn.parentID]
-      if (parent) parent.used -= spawn.cost
-      else spawn.army.used -= spawn.cost
-      spawn.army.spawned--
-      if (spawn.child === MANAGER) spawn.army.officers--
-      else spawn.army.ics--
-    }
 
     await ctx.tool.hook("execute.after", async (event) => {
       if (event.tool !== "subagent") return
@@ -401,7 +445,7 @@ const Army = {
       pending.delete(key)
       const sessionID = event.status === "completed" ? childSessionID(event.result) : undefined
       if (!sessionID) {
-        refund(spawn)
+        refund(spawn.army, spawn.parentID, spawn.child, spawn.cost)
         return save(spawn.army)
       }
       spawn.army.nodes[sessionID] = {

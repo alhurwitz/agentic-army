@@ -13,9 +13,10 @@ The plugin enforces the structure:
 | Rule | Enforcement |
 | --- | --- |
 | Depth | At most `maxDepth` (1-5) levels below the General; the leaf level is soldiers only. |
-| Chain of command | With `maxDepth >= 2`, the General spawns officers only. Soldiers never delegate. |
+| Chain of command | With `maxDepth >= 2`, the General spawns officers only. Untracked sessions cannot command troops. |
+| Promotion | A soldier that spawns is promoted to officer and borrows the spawn cost from its parent's budget. |
 | Span of control | At most 5 running direct reports per commander. |
-| Budget | Every officer prompt starts with `TROOPS: <n>`; an officer costs `1 + n`, a soldier costs 1. Unused budget returns to the parent. |
+| Budget | Every officer prompt starts with `TROOPS: <n>`; an officer costs `1 + n`, a soldier costs 1. Unused budget returns to the parent. Non-army helpers the General spawns (e.g. `explore`) are not counted. |
 | Isolation | Each child gets its own worktree under `<parent worktree>/.army/<slug>` on branch `<parent branch>-<slug>`. |
 
 Tools added to the session: `army_mobilize`, `army_status`, `army_wait`, `army_check`.
@@ -30,7 +31,14 @@ cd agentic-army
 ./install.sh
 ```
 
-`install.sh` symlinks the plugin, agents, and command into `~/.config/opencode` (override with `OPENCODE_CONFIG_DIR`) and the status CLI into `~/.local/bin` (override with `ARMY_BIN_DIR`). Existing non-symlink files are backed up.
+`install.sh` checks for Bun, OpenCode and git, runs the tests, then symlinks the plugin, agents, and command into `~/.config/opencode` (override with `OPENCODE_CONFIG_DIR`) and the status CLI into `~/.local/bin` (override with `ARMY_BIN_DIR`). Existing non-symlink files are moved to `~/.config/opencode/.army-backup/<timestamp>/`.
+
+Uninstall:
+
+```sh
+./uninstall.sh           # remove links that point into this repo
+./uninstall.sh --purge   # also delete saved run state
+```
 
 ## Usage
 
@@ -46,7 +54,7 @@ alberts-army-status ses_...    # a specific run
 alberts-army-status --all
 ```
 
-Run state is stored in `~/.local/share/opencode/army/`.
+Run state is stored in `~/.local/share/opencode/army/` (override with `ARMY_STATE_DIR`).
 
 ## Layout
 
