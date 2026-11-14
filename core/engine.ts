@@ -133,11 +133,12 @@ export const bindSpawn = (key: string, childID: string) => {
 
 // Fallback binding when only the child's id and type are known (SubagentStart-style events):
 // attach it to the oldest unbound spawn of that type in the caller's army.
-export const bindByType = (chain: string[], childID: string, childType: string, parentHint?: string) => {
+// Returns the child's army preamble when it was newly bound, for harnesses that inject it at start.
+export const bindByType = (chain: string[], childID: string, childType: string, parentHint?: string): string | undefined => {
   if (!isArmyAgent(childType)) return
   const { rootID, army: current } = locate(chain)
   if (!rootID || current?.nodes[childID]) return
-  withArmy(rootID, (army) => {
+  return withArmy(rootID, (army) => {
     if (!army || army.nodes[childID]) return { result: undefined }
     const open = Object.entries(army.pending ?? {})
       .filter(([, p]) => !p.boundTo && p.child === childType)
@@ -147,7 +148,7 @@ export const bindByType = (chain: string[], childID: string, childType: string, 
     const [, p] = match
     placeNode(army, childID, p)
     p.boundTo = childID
-    return { save: army, result: undefined }
+    return { save: army, result: childPreamble(army, p.child, p.depth, p.budget).trim() }
   })
 }
 

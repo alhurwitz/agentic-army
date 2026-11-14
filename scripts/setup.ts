@@ -34,7 +34,8 @@ const SPAWN: Record<Harness, string> = {
   opencode: 'the `subagent` tool (agent `army-officer` or `army-soldier`)',
   claude: "the Agent tool (`subagent_type` `army-officer` or `army-soldier`)",
   copilot: "the task tool (agent `army-officer` or `army-soldier`)",
-  codex: "your spawn-agent tool (agent type `army-officer` or `army-soldier`)",
+  codex:
+    "your spawn_agent tool (`agent_type` `army-officer` or `army-soldier`). Codex hides the message from the army hook, so for an officer put the budget in `task_name` as a `_troops_<n>` suffix (e.g. `team_api_troops_4`) instead of a `TROOPS:` line",
 }
 const RETRY: Record<Harness, string> = {
   opencode: "retry once via its sessionID with a corrected brief",
@@ -136,7 +137,7 @@ export const build = (harness: Harness): [string, string][] => {
 const hookCommand = (harness: Harness) => ({ type: "command", command: `"${BUN}" "${HOOK}" ${harness}`, timeout: 30 })
 const ownsHook = (entry: any) => JSON.stringify(entry).includes("army-hook.ts")
 
-const SPAWN_TOOLS = "^(Agent|Task|spawn_agent)$"
+const SPAWN_TOOLS = "^(Agent|Task)$|spawn_agent$"
 const ARMY_TOOLS = "army_(mobilize|status|wait|check)$"
 const ARMY_AGENTS = "^army-(officer|soldier)$"
 
@@ -266,6 +267,17 @@ const isOurLink = (path: string) => {
   }
 }
 
+// Codex ignores symlinked agent files, so its agents are copied; a copy is ours if it matches the render.
+const COPIED = (dest: string) => dest.startsWith(join(home(), ".codex", "agents") + "/")
+
+const isOurCopy = (src: string, dest: string) => {
+  try {
+    return lstatSync(dest).isFile() && readFileSync(dest, "utf8") === readFileSync(src, "utf8")
+  } catch {
+    return false
+  }
+}
+
 const link = (src: string, dest: string, log: (line: string) => void) => {
   mkdirSync(dirname(dest), { recursive: true })
   let exists = false
@@ -273,6 +285,18 @@ const link = (src: string, dest: string, log: (line: string) => void) => {
     lstatSync(dest)
     exists = true
   } catch {}
+  const ours = exists && (lstatSync(dest).isSymbolicLink() || (COPIED(dest) && dest.endsWith(".toml") && readFileSync(dest, "utf8").includes('name = "army-')))
+  if (COPIED(dest)) {
+    if (exists && !ours) {
+      const backup = join(dirname(dest), ".army-backup", STAMP)
+      mkdirSync(backup, { recursive: true })
+      renameSync(dest, join(backup, dest.split("/").pop()!))
+      log(`backed up ${dest} to ${backup}/`)
+    } else if (exists) rmSync(dest)
+    writeFileSync(dest, readFileSync(src))
+    log(`copied ${src} -> ${dest}`)
+    return
+  }
   if (exists && !lstatSync(dest).isSymbolicLink()) {
     const backup = join(dirname(dest), ".army-backup", STAMP)
     mkdirSync(backup, { recursive: true })
@@ -283,8 +307,8 @@ const link = (src: string, dest: string, log: (line: string) => void) => {
   log(`linked ${dest} -> ${src}`)
 }
 
-const unlink = (dest: string, log: (line: string) => void) => {
-  if (isOurLink(dest)) {
+const unlink = (dest: string, log: (line: string) => void, src?: string) => {
+  if (isOurLink(dest) || (src && COPIED(dest) && isOurCopy(src, dest))) {
     rmSync(dest)
     log(`removed ${dest}`)
   }
@@ -305,7 +329,7 @@ export const install = (harnesses: Harness[], log: (line: string) => void = cons
 export const uninstall = (harnesses: Harness[], log: (line: string) => void = console.log) => {
   for (const old of legacy()) unlink(old, log)
   for (const harness of harnesses) {
-    for (const [, dest] of build(harness)) unlink(dest, log)
+    for (const [src, dest] of build(harness)) unlink(dest, log, src)
     configure(harness, false, log)
   }
   if (harnesses.length === HARNESSES.length) unlink(join(binDir(), "army-status"), log)
