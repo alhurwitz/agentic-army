@@ -1,0 +1,4 @@
+#!/bin/sh
+# Prints army trees from saved state. See army-status.ts.
+DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+exec "$DIR/army-run" "$DIR/army-status.ts" "$@"

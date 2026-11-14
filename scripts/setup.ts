@@ -9,7 +9,7 @@ export const REPO = resolve(dirname(new URL(import.meta.url).pathname), "..")
 export const HARNESSES = ["opencode", "claude", "copilot", "codex"] as const
 export type Harness = (typeof HARNESSES)[number]
 
-const BUN = process.execPath
+const BUN = join(REPO, "bin", "army-run")
 const HOOK = join(REPO, "bin", "army-hook.ts")
 const MCP = join(REPO, "bin", "army-mcp.ts")
 const STAMP = new Date().toISOString().replace(/\D/g, "").slice(0, 14)
@@ -295,7 +295,7 @@ const legacy = () => [join(opencodeDir(), "commands", "alberts-army.md"), join(b
 
 export const install = (harnesses: Harness[], log: (line: string) => void = console.log) => {
   for (const old of legacy()) unlink(old, log)
-  link(join(REPO, "bin", "army-status.ts"), join(binDir(), "army-status"), log)
+  link(join(REPO, "bin", "army-status"), join(binDir(), "army-status"), log)
   for (const harness of harnesses) {
     for (const [src, dest] of build(harness)) link(src, dest, log)
     configure(harness, true, log)

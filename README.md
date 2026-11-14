@@ -39,7 +39,7 @@ Notes:
 
 ## Install
 
-Requires [Bun](https://bun.sh), git, and at least one harness.
+Requires git and at least one harness. Uses [Bun](https://bun.sh) if installed, otherwise the Bun runtime bundled inside OpenCode (`opencode` on PATH); one of the two is needed.
 
 ```sh
 git clone https://github.com/alhurwitz/agentic-army
@@ -98,5 +98,5 @@ tests/                 bun tests
 ## Development
 
 ```sh
-bun test tests
+bin/army-run test tests
 ```
