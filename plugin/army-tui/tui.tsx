@@ -1,15 +1,12 @@
 /** @jsxImportSource @opentui/solid */
-import { homedir } from "node:os"
-import { join } from "node:path"
-import { readArmies, renderTree, repoOf } from "./tree.ts"
+import { readArmies, renderTree, repoOf, stateDir } from "./tree.ts"
 
 // V2 TUI plugin: default export { id, setup }. Commands are registered from an "app" slot,
 // the same way the built-in /stats command does it. @opentui/solid is supplied by the host.
-const DIR = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local/share/opencode/army")
 
 // Prefer the army this session belongs to (as root or member); else the latest run in this repo.
 const statusText = (sessionID: string | undefined) => {
-  const { armies, skipped } = readArmies(DIR)
+  const { armies, skipped } = readArmies(stateDir())
   const list = armies.map(({ army }) => army)
   const here = repoOf(process.cwd())
   const army = list.find((o) => o.rootID === sessionID || (sessionID && o.nodes?.[sessionID])) ?? list.find((o) => o.repo === here)

@@ -1,7 +1,8 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // Minimal stdio MCP server exposing army_mobilize, army_status, army_wait, and army_check to
 // harnesses without an in-process plugin API. The army hook adds `_caller` (the calling agent's
 // id chain) to each call; without it the server cannot tell who is asking and refuses.
+import { isMain } from "../core/main.ts"
 import { createInterface } from "node:readline"
 
 import * as engine from "../core/engine.ts"
@@ -58,7 +59,7 @@ export const dispatch = async (message: any) => {
   return fail(id, -32601, `method not found: ${method}`)
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const lines = createInterface({ input: process.stdin })
   lines.on("line", (line) => {
     if (!line.trim()) return

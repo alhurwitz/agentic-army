@@ -5,7 +5,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
-STATE="${ARMY_STATE_DIR:-$HOME/.local/share/opencode/army}"
+STATE="${ARMY_STATE_DIR:-$HOME/.local/share/agentic-army/state}"
+LEGACY_STATE="$HOME/.local/share/opencode/army"
 
 RUN="$REPO/bin/army-run"
 
@@ -20,5 +21,6 @@ done
 if $purge; then
   rm -rf "$STATE"
   echo "removed run state $STATE"
+  if [ -z "${ARMY_STATE_DIR:-}" ] && [ -d "$LEGACY_STATE" ]; then rm -rf "$LEGACY_STATE"; echo "removed old run state $LEGACY_STATE"; fi
 fi
 echo "Done. Restart your agent harness(es)."

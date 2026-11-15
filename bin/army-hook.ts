@@ -1,7 +1,8 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // Hook command for harnesses that enforce the army through lifecycle hooks (Claude Code,
 // GitHub Copilot CLI, Codex). Usage: army-hook <claude|copilot|codex>, JSON event on stdin.
 // Fails open: an unexpected error never blocks the user's tool call.
+import { isMain, readStdin } from "../core/main.ts"
 import { randomUUID } from "node:crypto"
 
 import * as engine from "../core/engine.ts"
@@ -125,11 +126,11 @@ export const handle = (harness: Harness, raw: any): Out => {
   return undefined
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const harness = process.argv[2] as Harness
   try {
     if (!["claude", "copilot", "codex"].includes(harness)) throw new Error(`unknown harness "${harness}"`)
-    const raw = JSON.parse(await Bun.stdin.text())
+    const raw = JSON.parse(await readStdin())
     const out = handle(harness, raw)
     if (out) process.stdout.write(JSON.stringify(out))
   } catch (error: any) {
