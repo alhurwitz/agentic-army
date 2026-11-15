@@ -38,8 +38,9 @@ esac
 
 if [ "$1" = "test" ]; then
   shift
-  dir="${1:-$(dirname "$0")/../tests}"
-  if [ -n "${BUN:-}" ]; then exec "$BUN" test "$dir"; fi
+  dir="$(cd "${1:-$(dirname "$0")/../tests}" && pwd)" || exit 1
+  # Absolute file paths: bun test reads relative arguments as name filters, not paths.
+  if [ -n "${BUN:-}" ]; then exec "$BUN" test "$dir"/*.test.ts; fi
   exec "$NODE" --disable-warning=ExperimentalWarning --test "$dir"/*.test.ts
 fi
 if [ -n "${BUN:-}" ]; then exec "$BUN" "$@"; fi

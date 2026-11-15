@@ -9,15 +9,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         runtime: [bun, node]
     env:
       ARMY_RUNTIME: ${{ matrix.runtime }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
         if: matrix.runtime == 'bun'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: matrix.runtime == 'node'
         with:
           node-version: 24
