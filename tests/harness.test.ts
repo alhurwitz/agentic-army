@@ -293,11 +293,12 @@ test("run state moves from the old OpenCode folder to the agentic-army folder", 
   const saved = { HOME: process.env.HOME, ARMY_STATE_DIR: process.env.ARMY_STATE_DIR }
   process.env.HOME = mkdtempSync(join(tmpdir(), "army-home-"))
   delete process.env.ARMY_STATE_DIR
+  delete process.env.XDG_STATE_HOME
   try {
     mkdirSync(LEGACY_STATE_DIR(), { recursive: true })
     writeFileSync(join(LEGACY_STATE_DIR(), "ses_old.json"), "{}")
     expect(stateDir()).toBe(DEFAULT_STATE_DIR())
-    expect(DEFAULT_STATE_DIR()).toContain(join(".local", "share", "agentic-army", "state"))
+    expect(DEFAULT_STATE_DIR()).toContain(join(".local", "state", "agentic-army"))
     expect(existsSync(join(DEFAULT_STATE_DIR(), "ses_old.json"))).toBe(true)
     expect(existsSync(LEGACY_STATE_DIR())).toBe(false)
   } finally {

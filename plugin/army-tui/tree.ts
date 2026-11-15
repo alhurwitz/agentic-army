@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path"
 // Run state lives here for every harness (override with ARMY_STATE_DIR). Older versions kept it
 // under OpenCode's folder; the first call moves that folder here.
 export const LEGACY_STATE_DIR = () => join(homedir(), ".local", "share", "opencode", "army")
-export const DEFAULT_STATE_DIR = () => join(homedir(), ".local", "share", "agentic-army", "state")
+export const DEFAULT_STATE_DIR = () => join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agentic-army")
 
 export const stateDir = () => {
   if (process.env.ARMY_STATE_DIR) return process.env.ARMY_STATE_DIR
