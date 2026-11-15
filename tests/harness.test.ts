@@ -211,10 +211,13 @@ describe("setup", () => {
         ".config/opencode/agents/army-officer.md",
         ".claude/agents/army-soldier.md",
         ".claude/commands/army.md",
+        ".claude/commands/army-status.md",
         ".copilot/agents/army-officer.agent.md",
         ".copilot/skills/army",
+        ".copilot/skills/army-status",
         ".copilot/hooks/army.json",
         ".codex/prompts/army.md",
+        ".codex/prompts/army-status.md",
         ".local/bin/army-status",
       ])
         expect(lstatSync(join(home, path)).isSymbolicLink()).toBe(true)

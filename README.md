@@ -26,9 +26,9 @@ Tools: `army_mobilize`, `army_status`, `army_wait`, `army_check`.
 | Harness | Enforcement | Army tools | Agents and command |
 | --- | --- | --- | --- |
 | OpenCode | in-process plugin | plugin tools | `~/.config/opencode/agents`, `/army` command, TUI `/army-status` |
-| Claude Code | hooks in `~/.claude/settings.json` | MCP server in `~/.claude.json` | `~/.claude/agents`, `/army` command |
-| Copilot CLI | hooks in `~/.copilot/hooks/army.json` | MCP server in `~/.copilot/mcp-config.json` | `~/.copilot/agents`, `army` skill |
-| Codex | hooks in `~/.codex/hooks.json` | MCP server in `~/.codex/config.toml` | `~/.codex/agents`, `/army` prompt |
+| Claude Code | hooks in `~/.claude/settings.json` | MCP server in `~/.claude.json` | `~/.claude/agents`, `/army` and `/army-status` commands |
+| Copilot CLI | hooks in `~/.copilot/hooks/army.json` | MCP server in `~/.copilot/mcp-config.json` | `~/.copilot/agents`, `army` and `army-status` skills |
+| Codex | hooks in `~/.codex/hooks.json` | MCP server in `~/.codex/config.toml` | `~/.codex/agents`, `/army` and `/army-status` prompts |
 
 Notes:
 
@@ -69,7 +69,7 @@ Uninstall removes only links into this repo and the config entries the installer
 
 In Copilot CLI, ask to "run this as an army" (the `army` skill).
 
-Check a run without a model call:
+In a harness, `/army-status` shows the tree (OpenCode's TUI command needs no model call; in Claude Code, Codex, and Copilot ("army status") the model relays the CLI's output). From a terminal, with no model call:
 
 ```sh
 army-status            # this repo: running army, else its latest run
