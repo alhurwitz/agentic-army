@@ -1,6 +1,7 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // Renders the playbooks for each harness into dist/ and wires them, the hook command, and the
 // MCP server into each harness's config. Usage: setup.ts <install|uninstall> <harness...|all>
+import { isMain } from "../core/main.ts"
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -9,7 +10,7 @@ export const REPO = resolve(dirname(new URL(import.meta.url).pathname), "..")
 export const HARNESSES = ["opencode", "claude", "copilot", "codex"] as const
 export type Harness = (typeof HARNESSES)[number]
 
-const BUN = join(REPO, "bin", "army-run")
+const RUN = join(REPO, "bin", "army-run")
 const HOOK = join(REPO, "bin", "army-hook.ts")
 const MCP = join(REPO, "bin", "army-mcp.ts")
 const STAMP = new Date().toISOString().replace(/\D/g, "").slice(0, 14)
@@ -137,7 +138,7 @@ export const build = (harness: Harness): [string, string][] => {
   ]
 }
 
-const hookCommand = (harness: Harness) => ({ type: "command", command: `"${BUN}" "${HOOK}" ${harness}`, timeout: 30 })
+const hookCommand = (harness: Harness) => ({ type: "command", command: `"${RUN}" "${HOOK}" ${harness}`, timeout: 30 })
 const ownsHook = (entry: any) => JSON.stringify(entry).includes("army-hook.ts")
 
 const SPAWN_TOOLS = "^(Agent|Task)$|spawn_agent$"
@@ -154,7 +155,7 @@ export const settingsHooks = (harness: "claude" | "codex") => ({
 })
 
 export const copilotHooks = () => {
-  const entry = (matcher?: string) => ({ type: "command", exec: BUN, args: [HOOK, "copilot"], timeoutSec: 30, ...(matcher ? { matcher } : {}) })
+  const entry = (matcher?: string) => ({ type: "command", exec: RUN, args: [HOOK, "copilot"], timeoutSec: 30, ...(matcher ? { matcher } : {}) })
   return {
     version: 1,
     hooks: {
@@ -185,10 +186,10 @@ const stripHooks = (target: Record<string, any[]> | undefined) => {
   }
 }
 
-const mcpEntry = (harness: Harness) => ({ command: BUN, args: [MCP, harness] })
+const mcpEntry = (harness: Harness) => ({ command: RUN, args: [MCP, harness] })
 
 const tomlBlock = () =>
-  [TOML_BEGIN, "[mcp_servers.army]", `command = ${JSON.stringify(BUN)}`, `args = [${JSON.stringify(MCP)}, "codex"]`, TOML_END].join("\n")
+  [TOML_BEGIN, "[mcp_servers.army]", `command = ${JSON.stringify(RUN)}`, `args = [${JSON.stringify(MCP)}, "codex"]`, TOML_END].join("\n")
 
 const withoutBlock = (text: string) => {
   const rest = text.replace(new RegExp(`${TOML_BEGIN}[\\s\\S]*?${TOML_END}\\n?`, "g"), "").replace(/\n{3,}/g, "\n\n").trimEnd()
@@ -347,7 +348,7 @@ export const parseHarnesses = (args: string[]): Harness[] => {
   return args as Harness[]
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
   const [action, ...rest] = process.argv.slice(2)
   const harnesses = parseHarnesses(rest)
   if (action === "install") install(harnesses)

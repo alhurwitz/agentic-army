@@ -8,7 +8,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runtime: [bun, node]
+    env:
+      ARMY_RUNTIME: ${{ matrix.runtime }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun test tests
+        if: matrix.runtime == 'bun'
+      - uses: actions/setup-node@v4
+        if: matrix.runtime == 'node'
+        with:
+          node-version: 24
+      - run: bin/army-run test

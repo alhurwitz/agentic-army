@@ -39,16 +39,16 @@ Notes:
 
 ## Install
 
-Requires git and at least one harness. Uses [Bun](https://bun.sh) if installed, otherwise the Bun runtime bundled inside OpenCode (`opencode` on PATH); one of the two is needed.
+Runs on [Bun](https://bun.sh) or Node 22.18+; `bin/army-run` uses Bun when it finds it, otherwise Node (set `ARMY_RUNTIME=node` or `ARMY_RUNTIME=bun` to choose). `install.sh` installs whatever is missing: git (with your package manager), Node when there is neither runtime (the official build, into `~/.local/share/agentic-army/node`, no sudo; override with `ARMY_NODE_DIR`, pick the major version with `ARMY_NODE_MAJOR`, default 24), and the CLI of each harness you name (with npm, or Bun when there is no npm).
 
 ```sh
 git clone https://github.com/alhurwitz/agentic-army
 cd agentic-army
-./install.sh                    # every harness found on PATH
-./install.sh claude codex       # or pick: opencode, claude, copilot, codex, all
+./install.sh                    # every harness already on PATH
+./install.sh claude codex       # or name them (installs missing CLIs): opencode, claude, copilot, codex, all
 ```
 
-`install.sh` runs the tests, renders the playbooks for each harness into `dist/`, symlinks them into the harness config, and adds the hooks and MCP server entries. Existing files it would replace are moved to `.army-backup/<timestamp>/` next to them; edited JSON configs get a `.bak-army` copy. The status CLI is linked into `~/.local/bin` (override with `ARMY_BIN_DIR`). Set `OPENCODE_CONFIG_DIR` to use a different OpenCode config dir, and `ARMY_<HARNESS>_SOLDIER_MODEL` (e.g. `ARMY_OPENCODE_SOLDIER_MODEL`) to pin the soldier agent's model for one harness.
+After that, `install.sh` runs the tests, renders the playbooks for each harness into `dist/`, symlinks them into the harness config, and adds the hooks and MCP server entries. Existing files it would replace are moved to `.army-backup/<timestamp>/` next to them; edited JSON configs get a `.bak-army` copy. The status CLI is linked into `~/.local/bin` (override with `ARMY_BIN_DIR`). Set `OPENCODE_CONFIG_DIR` to use a different OpenCode config dir, and `ARMY_<HARNESS>_SOLDIER_MODEL` (e.g. `ARMY_OPENCODE_SOLDIER_MODEL`) to pin the soldier agent's model for one harness.
 
 Uninstall:
 
@@ -93,11 +93,13 @@ bin/army-mcp.ts        stdio MCP server with the army tools
 bin/army-status.ts     status CLI
 playbooks/             officer, soldier, and /army playbooks (rendered per harness)
 scripts/setup.ts       install/uninstall logic
-tests/                 bun tests
+core/main.ts           runtime helpers that work on Bun and Node (entry-point check, stdin)
+bin/army-run           runs the TypeScript with Bun or Node; `army-run test` runs the tests
+tests/                 tests (bun test or node --test; helpers in tests/support.ts)
 ```
 
 ## Development
 
 ```sh
-bin/army-run test tests
+bin/army-run test
 ```

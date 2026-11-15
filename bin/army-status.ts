@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // Prints army trees from saved state, with no model request.
 // Usage: army-status [rootID] [--all] [--watch]
 //   default: runs started in the current repo; the running one, else the most recent

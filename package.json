@@ -1,6 +1,7 @@
 {
   "name": "agentic-army",
   "version": "0.2.0",
+  "engines": { "node": ">=22.18" },
   "private": true,
   "type": "module",
   "description": "Chain-of-command multi-agent orchestration for OpenCode, Claude Code, GitHub Copilot CLI, and Codex: General → officers → soldiers, with enforced budgets and per-agent git worktrees.",
@@ -10,7 +11,7 @@
     "army-mcp": "./bin/army-mcp.ts"
   },
   "scripts": {
-    "test": "bun test tests",
+    "test": "bin/army-run test",
     "install:harness": "./install.sh"
   },
   "license": "MIT"

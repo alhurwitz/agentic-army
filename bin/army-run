@@ -1,7 +1,46 @@
 #!/bin/sh
-# Runs a TypeScript entry point with Bun, or with the Bun runtime bundled inside OpenCode
-# when Bun is not installed.
-if command -v bun >/dev/null 2>&1; then exec bun "$@"; fi
-if command -v opencode >/dev/null 2>&1; then BUN_BE_BUN=1 exec opencode "$@"; fi
-echo "agentic-army: needs bun or opencode on PATH" >&2
-exit 127
+# Runs a TypeScript entry point with Bun or Node (22.18+, which runs .ts files directly).
+# Prefers Bun when it is installed; set ARMY_RUNTIME=node or ARMY_RUNTIME=bun to choose.
+# `army-run test [dir]` runs the test suite. install.sh installs Node when neither is found.
+LOCAL_NODE="${ARMY_NODE_DIR:-$HOME/.local/share/agentic-army/node}/bin/node"
+MIN_MAJOR=22
+MIN_MINOR=18
+
+node_ok() {
+  v=$("$1" -p 'process.versions.node' 2>/dev/null) || return 1
+  major=${v%%.*}; rest=${v#*.}; minor=${rest%%.*}
+  [ "$major" -gt "$MIN_MAJOR" ] || { [ "$major" -eq "$MIN_MAJOR" ] && [ "$minor" -ge "$MIN_MINOR" ]; }
+}
+
+find_bun() {
+  # Bun's installer puts bun in ~/.bun/bin, which is often not on PATH until the shell restarts.
+  for b in "$(command -v bun 2>/dev/null)" "${BUN_INSTALL:-$HOME/.bun}/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
+    if [ -n "$b" ] && [ -x "$b" ]; then echo "$b"; return 0; fi
+  done
+  return 1
+}
+
+find_node() {
+  for n in "$(command -v node 2>/dev/null)" "$LOCAL_NODE"; do
+    if [ -n "$n" ] && [ -x "$n" ] && node_ok "$n"; then echo "$n"; return 0; fi
+  done
+  return 1
+}
+
+case "${ARMY_RUNTIME:-auto}" in
+  bun) BUN=$(find_bun) || { echo "agentic-army: ARMY_RUNTIME=bun but bun was not found" >&2; exit 127; } ;;
+  node) NODE=$(find_node) || { echo "agentic-army: ARMY_RUNTIME=node but Node $MIN_MAJOR.$MIN_MINOR+ was not found" >&2; exit 127; } ;;
+  *) BUN=$(find_bun) || NODE=$(find_node) || {
+      echo "agentic-army: needs Bun or Node $MIN_MAJOR.$MIN_MINOR+. Run ./install.sh to install Node." >&2
+      exit 127
+    } ;;
+esac
+
+if [ "$1" = "test" ]; then
+  shift
+  dir="${1:-$(dirname "$0")/../tests}"
+  if [ -n "${BUN:-}" ]; then exec "$BUN" test "$dir"; fi
+  exec "$NODE" --disable-warning=ExperimentalWarning --test "$dir"/*.test.ts
+fi
+if [ -n "${BUN:-}" ]; then exec "$BUN" "$@"; fi
+exec "$NODE" --disable-warning=ExperimentalWarning "$@"
