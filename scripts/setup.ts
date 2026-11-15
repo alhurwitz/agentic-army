@@ -320,11 +320,15 @@ const unlink = (dest: string, log: (line: string) => void, src?: string) => {
   }
 }
 
-// Links installed under older names; removed on install and uninstall.
-const legacy = () => [join(opencodeDir(), "commands", "alberts-army.md"), join(binDir(), "alberts-army-status")]
+// Links installed under older names; removed on install and uninstall. Harness-specific ones are
+// only touched when that harness is being (un)installed.
+const legacy = (harnesses: Harness[]) => [
+  join(binDir(), "alberts-army-status"),
+  ...(harnesses.includes("opencode") ? [join(opencodeDir(), "commands", "alberts-army.md")] : []),
+]
 
 export const install = (harnesses: Harness[], log: (line: string) => void = console.log) => {
-  for (const old of legacy()) unlink(old, log)
+  for (const old of legacy(harnesses)) unlink(old, log)
   link(join(REPO, "bin", "army-status"), join(binDir(), "army-status"), log)
   for (const harness of harnesses) {
     for (const [src, dest] of build(harness)) link(src, dest, log)
@@ -333,12 +337,14 @@ export const install = (harnesses: Harness[], log: (line: string) => void = cons
 }
 
 export const uninstall = (harnesses: Harness[], log: (line: string) => void = console.log) => {
-  for (const old of legacy()) unlink(old, log)
+  for (const old of legacy(harnesses)) unlink(old, log)
   for (const harness of harnesses) {
     for (const [src, dest] of build(harness)) unlink(dest, log, src)
     configure(harness, false, log)
   }
-  if (harnesses.length === HARNESSES.length) unlink(join(binDir(), "army-status"), log)
+  // army-status is shared; remove it once no harness has the army installed.
+  const stillInstalled = HARNESSES.some((h) => existsSync(officerPath(h)))
+  if (!stillInstalled) unlink(join(binDir(), "army-status"), log)
 }
 
 export const parseHarnesses = (args: string[]): Harness[] => {

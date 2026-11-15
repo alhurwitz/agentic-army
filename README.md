@@ -78,7 +78,7 @@ army-status --watch    # live view, refreshes every 2s
 army-status --all      # every run, from any repo
 ```
 
-Run state is stored in `~/.local/share/opencode/army/` (override with `ARMY_STATE_DIR`), one JSON file per run, shared by every harness and guarded by a lock.
+Run state is stored in `~/.local/share/agentic-army/state/` (override with `ARMY_STATE_DIR`), one JSON file per run, shared by every harness and guarded by a lock. Runs saved by older versions in `~/.local/share/opencode/army/` are moved there automatically.
 
 ## Layout
 

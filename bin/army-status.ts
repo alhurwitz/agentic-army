@@ -4,11 +4,8 @@
 //   default: runs started in the current repo; the running one, else the most recent
 //   --all: every run, from any repo
 import { statSync } from "node:fs"
-import { homedir } from "node:os"
-import { join } from "node:path"
-import { readArmies, renderTree, repoOf, type SavedArmy } from "../plugin/army-tui/tree.ts"
+import { readArmies, renderTree, repoOf, stateDir, type SavedArmy } from "../plugin/army-tui/tree.ts"
 
-const dir = process.env.ARMY_STATE_DIR ?? join(homedir(), ".local/share/opencode/army")
 const args = process.argv.slice(2)
 const id = args.find((arg) => !arg.startsWith("--"))
 const all = args.includes("--all")
@@ -27,14 +24,14 @@ const running = ({ army }: SavedArmy) => Object.values(army.nodes).filter((n) =>
 const here = repoOf(process.cwd())
 
 const header = (saved: SavedArmy) => {
-  const harness = (saved.army as { harness?: string }).harness ?? "opencode"
+  const harness = (saved.army as { harness?: string }).harness
   const n = running(saved)
   const where = all ? ` · ${saved.army.repo ?? "unknown repo"}` : ""
-  return `[${harness}] updated ${ago(statSync(saved.file).mtimeMs)} · ${n ? `${n} running` : "finished"}${where}`
+  return `${harness ? `[${harness}] ` : ""}updated ${ago(statSync(saved.file).mtimeMs)} · ${n ? `${n} running` : "finished"}${where}`
 }
 
 const render = () => {
-  const { armies, skipped } = readArmies(dir)
+  const { armies, skipped } = readArmies(stateDir())
   const lines = skipped.map((line) => `warning: skipped ${line}`)
   const local = armies.filter(({ army }) => army.repo === here)
   const active = local.filter((saved) => running(saved) > 0)
