@@ -1,7 +1,10 @@
-import { describe, expect, test } from "bun:test"
+import { describe, test, expect } from "./support.ts"
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { spawnSync } from "node:child_process"
+
+import { repoOf } from "../plugin/army-tui/tree.ts"
 
 process.env.ARMY_STATE_DIR = mkdtempSync(join(tmpdir(), "army-harness-"))
 const { handle, findAgentID } = await import("../bin/army-hook.ts")
@@ -254,7 +257,7 @@ test("engine exports tool docs for every tool", () => {
 })
 
 describe("runs are scoped to the repo they started in", () => {
-  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-C", cwd, ...args]).exitCode
+  const git = (cwd: string, ...args: string[]) => spawnSync("git", ["-C", cwd, ...args]).status
   const repo = () => {
     const dir = mkdtempSync(join(tmpdir(), "army-repo-"))
     git(dir, "init", "-q")
@@ -262,10 +265,9 @@ describe("runs are scoped to the repo they started in", () => {
     return dir
   }
   const status = (cwd: string, ...args: string[]) =>
-    Bun.spawnSync(["bun", join(import.meta.dir, "..", "bin", "army-status.ts"), ...args], { cwd, env: process.env }).stdout.toString()
+    spawnSync(join(import.meta.dirname, "..", "bin", "army-status"), args, { cwd, env: process.env }).stdout.toString()
 
   test("mobilize records the main checkout, even from a worktree", () => {
-    const { repoOf } = require("../plugin/army-tui/tree.ts")
     const main = repo()
     git(main, "worktree", "add", "-q", "-b", "wt", join(main, ".army", "wt"))
     expect(repoOf(join(main, ".army", "wt"))).toBe(repoOf(main))
@@ -275,7 +277,6 @@ describe("runs are scoped to the repo they started in", () => {
   })
 
   test("army-status shows only this repo's runs; --all shows every run", () => {
-    const { repoOf } = require("../plugin/army-tui/tree.ts")
     const mine = repo()
     const other = repo()
     const root = uid("mine")
@@ -285,4 +286,22 @@ describe("runs are scoped to the repo they started in", () => {
     expect(status(other, "--all")).toContain(`General ${root}`)
     expect(status(other, root)).toContain(`General ${root}`)
   })
+})
+
+test("run state moves from the old OpenCode folder to the agentic-army folder", async () => {
+  const { stateDir, DEFAULT_STATE_DIR, LEGACY_STATE_DIR } = await import("../plugin/army-tui/tree.ts")
+  const saved = { HOME: process.env.HOME, ARMY_STATE_DIR: process.env.ARMY_STATE_DIR }
+  process.env.HOME = mkdtempSync(join(tmpdir(), "army-home-"))
+  delete process.env.ARMY_STATE_DIR
+  try {
+    mkdirSync(LEGACY_STATE_DIR(), { recursive: true })
+    writeFileSync(join(LEGACY_STATE_DIR(), "ses_old.json"), "{}")
+    expect(stateDir()).toBe(DEFAULT_STATE_DIR())
+    expect(DEFAULT_STATE_DIR()).toContain(join(".local", "share", "agentic-army", "state"))
+    expect(existsSync(join(DEFAULT_STATE_DIR(), "ses_old.json"))).toBe(true)
+    expect(existsSync(LEGACY_STATE_DIR())).toBe(false)
+  } finally {
+    process.env.HOME = saved.HOME
+    process.env.ARMY_STATE_DIR = saved.ARMY_STATE_DIR
+  }
 })

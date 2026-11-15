@@ -1,16 +1,15 @@
 // Run state on disk: one JSON file per army, guarded by a lock directory so separate
 // processes (OpenCode plugin, hook commands, MCP servers) can read-modify-write safely.
 import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs"
-import { homedir } from "node:os"
 import { join } from "node:path"
 
-import { readArmies } from "../plugin/army-tui/tree.ts"
+import { readArmies, stateDir } from "../plugin/army-tui/tree.ts"
 import type { Army } from "./rules.ts"
 
 const LOCK_STALE_MS = 30_000
 const LOCK_TIMEOUT_MS = 10_000
 
-export const stateDir = () => process.env.ARMY_STATE_DIR ?? join(homedir(), ".local", "share", "opencode", "army")
+export { stateDir }
 
 const fileOf = (rootID: string) => join(stateDir(), `${rootID.replace(/[^A-Za-z0-9_.-]/g, "_")}.json`)
 

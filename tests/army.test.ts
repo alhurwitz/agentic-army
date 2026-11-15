@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, test, expect } from "./support.ts"
 import Army from "../plugin/army.ts"
 
 const { parseBudget, remaining, spawnCost, settle, renderTree, childSessionID, orgWorktrees, childBranches } = Army.logic

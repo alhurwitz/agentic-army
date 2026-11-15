@@ -1,7 +1,25 @@
 // Shared by the army server plugin and the army-tui terminal plugin. Keep dependency-free.
 import { execFileSync } from "node:child_process"
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync } from "node:fs"
+import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
+
+// Run state lives here for every harness (override with ARMY_STATE_DIR). Older versions kept it
+// under OpenCode's folder; the first call moves that folder here.
+export const LEGACY_STATE_DIR = () => join(homedir(), ".local", "share", "opencode", "army")
+export const DEFAULT_STATE_DIR = () => join(homedir(), ".local", "share", "agentic-army", "state")
+
+export const stateDir = () => {
+  if (process.env.ARMY_STATE_DIR) return process.env.ARMY_STATE_DIR
+  const dir = DEFAULT_STATE_DIR()
+  if (!existsSync(dir) && existsSync(LEGACY_STATE_DIR())) {
+    try {
+      mkdirSync(dirname(dir), { recursive: true })
+      renameSync(LEGACY_STATE_DIR(), dir)
+    } catch {}
+  }
+  return dir
+}
 
 export type TreeNode = {
   sessionID: string
