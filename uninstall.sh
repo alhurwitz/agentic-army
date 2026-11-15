@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
-STATE="${ARMY_STATE_DIR:-$HOME/.local/share/agentic-army/state}"
+STATE="${ARMY_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/agentic-army}"
 LEGACY_STATE="$HOME/.local/share/opencode/army"
 
 RUN="$REPO/bin/army-run"

@@ -2,7 +2,7 @@
 # Runs a TypeScript entry point with Bun or Node (22.18+, which runs .ts files directly).
 # Prefers Bun when it is installed; set ARMY_RUNTIME=node or ARMY_RUNTIME=bun to choose.
 # `army-run test [dir]` runs the test suite. install.sh installs Node when neither is found.
-LOCAL_NODE="${ARMY_NODE_DIR:-$HOME/.local/share/agentic-army/node}/bin/node"
+LOCAL_NODE="${ARMY_NODE_DIR:-$HOME/.local/share/agentic-army-node}/bin/node"
 MIN_MAJOR=22
 MIN_MINOR=18
 

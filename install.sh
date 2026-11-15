@@ -9,7 +9,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")" && pwd)"
 RUN="$REPO/bin/army-run"
 BIN="${ARMY_BIN_DIR:-$HOME/.local/bin}"
-NODE_DIR="${ARMY_NODE_DIR:-$HOME/.local/share/agentic-army/node}"
+NODE_DIR="${ARMY_NODE_DIR:-$HOME/.local/share/agentic-army-node}"
 NODE_MAJOR="${ARMY_NODE_MAJOR:-24}"
 
 fail() { echo "error: $*" >&2; exit 1; }
