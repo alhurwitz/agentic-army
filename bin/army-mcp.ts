@@ -3,12 +3,13 @@
 // harnesses without an in-process plugin API. The army hook adds `_caller` (the calling agent's
 // id chain) to each call; without it the server cannot tell who is asking and refuses.
 import { isMain } from "../core/main.ts"
+import { readFileSync } from "node:fs"
 import { createInterface } from "node:readline"
 
 import * as engine from "../core/engine.ts"
 
 const NAME = "army"
-const VERSION = "0.2.0"
+const VERSION: string = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 const CALLER = {
   type: "array",
   items: { type: "string" },
