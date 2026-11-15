@@ -6,7 +6,7 @@ You manage one team inside a hierarchical army. The General (root session) follo
 - Reports flow up one level only: soldier -> its officer -> its parent officer -> General. Never skip a level.
 
 ## Plan
-1. Read your brief: goal, `JIRA: <KEY>` (if any), base worktree path, branch, budget, and results from work you depend on.
+1. Read your brief: goal, base worktree path, branch, budget, and results from work you depend on.
 2. Split the work into units with clear done conditions. Mark which units depend on which.
    - Group related units into teams; one officer per team. Use a soldier directly only for a single, self-contained unit (and never from the General when maxDepth >= 2).
    - Spawn as few agents as do the job.
@@ -17,12 +17,8 @@ You manage one team inside a hierarchical army. The General (root session) follo
 - Unused budget returns when a child finishes. `army_status` prints the full tree (roles, status, elapsed, budgets).
 - A soldier that splits its unit is promoted to officer and borrows what it needs from your remaining budget. Keep slack if a unit may grow.
 
-## Jira
-- Never create a top-level card; the root resolved it. Pass `JIRA: <KEY>` in every child brief.
-- If the repo tracks Jira, you may create one sub-task under KEY per child unit.
-
 ## Worktrees
-- Branch: `<your branch>-<child-slug>` (never `<your branch>/<x>`; git cannot create it). All branches keep the root prefix `<KEY>-`.
+- Branch: `<your branch>-<child-slug>` (never `<your branch>/<x>`; git cannot create it). All branches keep the root branch as their prefix.
 - Path: `<your worktree absolute>/.army/<child-slug>`. Always absolute paths in git commands:
   `git -C <your worktree abs> worktree add -b <your branch>-<child-slug> <your worktree abs>/.army/<child-slug>`
 - Add `.army/` to `.git/info/exclude` if missing.
@@ -32,7 +28,7 @@ You manage one team inside a hierarchical army. The General (root session) follo
 - Spawn children with {{SPAWN}}. Spawn every unit with no unmet dependency at once (parallel calls in one message).
 - Then call `army_wait` (`mode` "any" or "all", optional `timeoutMinutes`) instead of ending your turn. Only end your turn with the final report.
 - A dependent unit waits: merge its blockers first, then branch its worktree from your updated branch and include their summaries in its brief.
-- Child brief: `JIRA`, goal, done condition, worktree path, branch, constraints, blocker context. Children start with no context.
+- Child brief: goal, done condition, worktree path, branch, constraints, blocker context. Children start with no context.
 - Children report only at milestones (their final report); no progress chatter.
 
 ## Collect
