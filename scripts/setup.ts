@@ -29,6 +29,18 @@ const DESCRIPTIONS = {
   soldier:
     "Individual contributor in an army run. Does one well-scoped unit of work in the git worktree its officer assigned, commits it, and reports back. If the unit turns out too big, it may split it and is promoted to officer for that work.",
   army: "Run a task with a chain of command: the General commands officers and soldiers",
+  status: "Show the army tree: this repo's running army, else its latest run",
+}
+
+const STATUS_BIN = join(REPO, "bin", "army-status")
+
+// Status command body. Claude Code runs the !`...` line itself and hands the model the output;
+// Codex and Copilot are asked to run the CLI.
+const statusBody = (harness: Harness) => {
+  const show = "Show its output to the user exactly as printed, in a code block. Do not run anything else."
+  if (harness === "claude") return `!\`"${STATUS_BIN}" $ARGUMENTS\`\n\n${show.replace("its output", "the output above")}\n`
+  const args = harness === "codex" ? " $ARGUMENTS" : ""
+  return `Run \`"${STATUS_BIN}"${args}\` in the shell from the current directory (it accepts an optional run id and \`--all\`). ${show}\n`
 }
 
 const SPAWN: Record<Harness, string> = {
@@ -99,8 +111,10 @@ export const build = (harness: Harness): [string, string][] => {
     write(dist(harness, "army-officer.md"), yaml({ name: "army-officer", description: DESCRIPTIONS.officer }) + "\n" + officer)
     write(dist(harness, "army-soldier.md"), yaml({ name: "army-soldier", description: DESCRIPTIONS.soldier, model: soldierModel }) + "\n" + soldier)
     write(dist(harness, "army.md"), yaml({ description: DESCRIPTIONS.army, "argument-hint": "<task>" }) + "\n" + army)
+    write(dist(harness, "army-status.md"), yaml({ description: DESCRIPTIONS.status, "argument-hint": "[run id] [--all]", "allowed-tools": `Bash("${STATUS_BIN}":*)` }) + "\n" + statusBody(harness))
     const root = join(home(), ".claude")
     return [
+      [dist(harness, "army-status.md"), join(root, "commands", "army-status.md")],
       [dist(harness, "army-officer.md"), join(root, "agents", "army-officer.md")],
       [dist(harness, "army-soldier.md"), join(root, "agents", "army-soldier.md")],
       [dist(harness, "army.md"), join(root, "commands", "army.md")],
@@ -110,12 +124,14 @@ export const build = (harness: Harness): [string, string][] => {
     write(dist(harness, "army-officer.agent.md"), yaml({ name: "army-officer", description: DESCRIPTIONS.officer }) + "\n" + officer)
     write(dist(harness, "army-soldier.agent.md"), yaml({ name: "army-soldier", description: DESCRIPTIONS.soldier, model: soldierModel }) + "\n" + soldier)
     write(dist(harness, "army", "SKILL.md"), yaml({ name: "army", description: `${DESCRIPTIONS.army}. Use when the user asks to run a task as an army.` }) + "\n" + army)
+    write(dist(harness, "army-status", "SKILL.md"), yaml({ name: "army-status", description: `${DESCRIPTIONS.status}. Use when the user asks for army status or how an army run is going.` }) + "\n" + statusBody(harness))
     write(dist(harness, "hooks.json"), JSON.stringify(copilotHooks(), null, 2) + "\n")
     const root = join(home(), ".copilot")
     return [
       [dist(harness, "army-officer.agent.md"), join(root, "agents", "army-officer.agent.md")],
       [dist(harness, "army-soldier.agent.md"), join(root, "agents", "army-soldier.agent.md")],
       [dist(harness, "army"), join(root, "skills", "army")],
+      [dist(harness, "army-status"), join(root, "skills", "army-status")],
       [dist(harness, "hooks.json"), join(root, "hooks", "army.json")],
     ]
   }
@@ -130,8 +146,10 @@ export const build = (harness: Harness): [string, string][] => {
   write(dist(harness, "army-officer.toml"), agentToml("army-officer", DESCRIPTIONS.officer, officer))
   write(dist(harness, "army-soldier.toml"), agentToml("army-soldier", DESCRIPTIONS.soldier, soldier, soldierModel))
   write(dist(harness, "army.md"), yaml({ description: DESCRIPTIONS.army, "argument-hint": "<task>" }) + "\n" + army)
+  write(dist(harness, "army-status.md"), yaml({ description: DESCRIPTIONS.status, "argument-hint": "[run id] [--all]" }) + "\n" + statusBody(harness))
   const root = join(home(), ".codex")
   return [
+    [dist(harness, "army-status.md"), join(root, "prompts", "army-status.md")],
     [dist(harness, "army-officer.toml"), join(root, "agents", "army-officer.toml")],
     [dist(harness, "army-soldier.toml"), join(root, "agents", "army-soldier.toml")],
     [dist(harness, "army.md"), join(root, "prompts", "army.md")],
