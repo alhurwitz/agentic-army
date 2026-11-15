@@ -39,7 +39,7 @@ Notes:
 
 ## Install
 
-Runs on [Bun](https://bun.sh) or Node 22.18+; `bin/army-run` uses Bun when it finds it, otherwise Node (set `ARMY_RUNTIME=node` or `ARMY_RUNTIME=bun` to choose). `install.sh` installs whatever is missing: git (with your package manager), Node when there is neither runtime (the official build, into `~/.local/share/agentic-army/node`, no sudo; override with `ARMY_NODE_DIR`, pick the major version with `ARMY_NODE_MAJOR`, default 24), and the CLI of each harness you name (with npm, or Bun when there is no npm).
+Runs on [Bun](https://bun.sh) or Node 22.18+; `bin/army-run` uses Bun when it finds it, otherwise Node (set `ARMY_RUNTIME=node` or `ARMY_RUNTIME=bun` to choose). `install.sh` installs whatever is missing: git (with your package manager), Node when there is neither runtime (the official build, into `~/.local/share/agentic-army-node`, no sudo; override with `ARMY_NODE_DIR`, pick the major version with `ARMY_NODE_MAJOR`, default 24), and the CLI of each harness you name (with npm, or Bun when there is no npm).
 
 ```sh
 git clone https://github.com/alhurwitz/agentic-army
@@ -78,7 +78,7 @@ army-status --watch    # live view, refreshes every 2s
 army-status --all      # every run, from any repo
 ```
 
-Run state is stored in `~/.local/share/agentic-army/state/` (override with `ARMY_STATE_DIR`), one JSON file per run, shared by every harness and guarded by a lock. Runs saved by older versions in `~/.local/share/opencode/army/` are moved there automatically.
+Run state is stored in `~/.local/state/agentic-army/` (or `$XDG_STATE_HOME/agentic-army/`) (override with `ARMY_STATE_DIR`), one JSON file per run, shared by every harness and guarded by a lock. Runs saved by older versions in `~/.local/share/opencode/army/` are moved there automatically.
 
 ## Layout
 
